@@ -151,6 +151,8 @@ function normalizeSong(s) {
     year: Number.isFinite(y) && y > 0 ? y : 0, // 0 = år saknas
     url: String(s.url ?? "").trim(),
     tidbit: String(s.tidbit ?? "").trim(),
+    art: String(s.art ?? "").trim(),         // skivomslag (bild-URL)
+    preview: String(s.preview ?? "").trim(), // 30 s ljudsnutt (URL)
   };
 }
 
@@ -398,6 +400,7 @@ function renderEditor() {
         (s.year > 0 ? "" : " ⚠️");
       li.innerHTML = `
         <span class="song-year">${s.year > 0 ? escapeHtml(s.year) : "–"}</span>
+        ${s.art ? `<img class="song-thumb" src="${escapeHtml(s.art)}" alt="" loading="lazy">` : ""}
         <span class="song-meta">
           <div class="t">${escapeHtml(s.title)}</div>
           <div class="a">${escapeHtml(s.artist)}</div>
@@ -556,7 +559,7 @@ ${JSON.stringify({ name: pl.name, songs: pl.songs }, null, 2)}
 Gör så här:
 1. Skriv en kort, rolig och gärna överraskande "tidbit" på svenska (1–2 meningar) om artisten eller låten i fältet "tidbit" för varje låt.
 2. Där "artist" är tom eller "year" är 0: fyll i artist och originalåret då låten först släpptes, om du känner igen låten (titeln och Spotify-länken i "url" är ledtrådar). Är du osäker på året, lämna 0.
-3. Ändra inget annat – behåll "title" och "url" exakt som de är.
+3. Ändra inget annat – behåll "title", "url", "art" och "preview" exakt som de är.
 
 Svara med enbart den kompletta JSON-filen (samma format) så att jag kan importera den direkt i spelet.`;
   try {
@@ -566,6 +569,137 @@ Svara med enbart den kompletta JSON-filen (samma format) så att jag kan importe
     window.prompt("Kopiera texten manuellt:", prompt);
   }
 };
+
+/* --- iTunes-uppslag: årtal, skivomslag och 30 s ljudsnutt --- */
+async function itunesLookup(artist, title) {
+  const term = encodeURIComponent(`${artist} ${title}`.trim());
+  const res = await fetch(
+    `https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=5&country=SE`
+  );
+  if (!res.ok) throw new Error(`iTunes svarade ${res.status}`);
+  const results = (await res.json()).results || [];
+  if (results.length === 0) return null;
+
+  const norm = (x) => String(x || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const t = norm(title), a = norm(artist);
+  const best = results.find((r) =>
+    (!t || norm(r.trackName).includes(t) || t.includes(norm(r.trackName))) &&
+    (!a || norm(r.artistName).includes(a) || a.includes(norm(r.artistName)))
+  ) || results[0];
+
+  const ym = String(best.releaseDate || "").match(/^(\d{4})/);
+  return {
+    artist: best.artistName || "",
+    title: best.trackName || "",
+    year: ym ? Number(ym[1]) : 0,
+    art: (best.artworkUrl100 || "").replace("100x100bb", "300x300bb"),
+    preview: best.previewUrl || "",
+  };
+}
+
+$("btn-autofill").onclick = async () => {
+  const btn = $("btn-autofill");
+  const pl = currentPlaylist();
+  const todo = pl.songs.filter(
+    (s) => (s.title || s.artist) && (s.year === 0 || !s.artist || !s.art || !s.preview)
+  );
+  if (todo.length === 0) { toast("Alla låtar har redan år, omslag och ljud! ✨", "ok"); return; }
+
+  btn.disabled = true;
+  let done = 0, filled = 0, failed = 0;
+  for (const s of todo) {
+    btn.textContent = `🍎 Slår upp ${++done}/${todo.length}…`;
+    try {
+      const hit = await itunesLookup(s.artist, s.title.replace(/\s*\(fyll i\)$/i, ""));
+      if (hit) {
+        if (s.year === 0 && hit.year) s.year = hit.year;
+        if (!s.artist && hit.artist) s.artist = hit.artist;
+        if (s.title.includes("Okänd låt") && hit.title) s.title = hit.title;
+        if (!s.art && hit.art) s.art = hit.art;
+        if (!s.preview && hit.preview) s.preview = hit.preview;
+        filled++;
+      } else failed++;
+    } catch (_) { failed++; }
+    saveStore();
+    await new Promise((r) => setTimeout(r, 250)); // snällt mot API:t
+  }
+  btn.disabled = false;
+  btn.textContent = "🍎 Auto-komplettera låtdata";
+  renderEditor();
+  toast(
+    `Klart! ${filled} låtar kompletterade.` +
+    (failed ? ` ${failed} hittades inte – fyll i dem för hand.` : " 🎉"),
+    failed ? "warn" : "ok"
+  );
+};
+
+/* --- Dela spellista via länk (allt bakas in i URL:en, ingen server) --- */
+async function encodeShare(pl) {
+  const bytes = new TextEncoder().encode(JSON.stringify({ name: pl.name, songs: pl.songs }));
+  let payload = bytes, tag = "j";
+  if (window.CompressionStream) {
+    const buf = await new Response(
+      new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate-raw"))
+    ).arrayBuffer();
+    payload = new Uint8Array(buf);
+    tag = "z";
+  }
+  let bin = "";
+  for (let i = 0; i < payload.length; i += 0x8000) {
+    bin += String.fromCharCode(...payload.subarray(i, i + 0x8000));
+  }
+  return tag + "." + btoa(bin).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+}
+
+async function decodeShare(s) {
+  const dot = s.indexOf(".");
+  const tag = s.slice(0, dot);
+  const bin = atob(s.slice(dot + 1).replaceAll("-", "+").replaceAll("_", "/"));
+  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  let json;
+  if (tag === "z") {
+    json = await new Response(
+      new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"))
+    ).text();
+  } else {
+    json = new TextDecoder().decode(bytes);
+  }
+  return JSON.parse(json);
+}
+
+$("btn-share").onclick = async () => {
+  const pl = currentPlaylist();
+  if (pl.songs.length === 0) { toast("Listan är tom – inget att dela.", "err"); return; }
+  try {
+    const link = location.origin + location.pathname + "#pl=" + await encodeShare(pl);
+    await navigator.clipboard.writeText(link);
+    toast(`Länk kopierad (${Math.round(link.length / 1024)} kB)! Skicka den till en kompis. 🔗`, "ok");
+  } catch (_) {
+    toast("Kunde inte skapa/kopiera länken i den här webbläsaren.", "err");
+  }
+};
+
+async function importSharedFromHash() {
+  const m = location.hash.match(/^#pl=(.+)$/);
+  if (!m) return;
+  history.replaceState(null, "", location.pathname + location.search);
+  try {
+    const p = await decodeShare(decodeURIComponent(m[1]));
+    if (!p || !Array.isArray(p.songs)) throw new Error("fel format");
+    const songs = p.songs.map(normalizeSong).filter((s) => s.artist || s.title);
+    if (songs.length === 0) throw new Error("inga låtar");
+    if (!confirm(`📩 Någon har delat spellistan ”${p.name || "Namnlös"}” (${songs.length} låtar) med dig.\nImportera den?`)) return;
+    const pl = { id: uid(), name: p.name || "Delad lista", songs };
+    store.playlists.push(pl);
+    store.activeId = pl.id;
+    saveStore();
+    renderStart();
+    toast("Delad lista importerad! 🎉", "ok");
+    offerQuickStart(pl);
+  } catch (_) {
+    toast("Kunde inte läsa den delade länken.", "err");
+  }
+}
 
 /* --- Utskrift av kort (QR-framsida + info-baksida) --- */
 function songQrUrl(song) {
@@ -791,6 +925,7 @@ $("btn-import-links").onclick = async () => {
 let ytPlayer = null;
 let spotifyApi = null;
 let spotifyController = null;
+let previewAudio = null;
 let currentTrack = { type: "none" };
 
 window.onSpotifyIframeApiReady = (api) => { spotifyApi = api; };
@@ -798,6 +933,7 @@ window.onSpotifyIframeApiReady = (api) => { spotifyApi = api; };
 function destroyPlayers() {
   if (ytPlayer) { try { ytPlayer.destroy(); } catch (_) {} ytPlayer = null; }
   if (spotifyController) { try { spotifyController.destroy(); } catch (_) {} spotifyController = null; }
+  if (previewAudio) { try { previewAudio.pause(); } catch (_) {} previewAudio = null; }
   $("embed-holder").innerHTML = "";
 }
 
@@ -807,7 +943,6 @@ function setSpinning(on) {
 
 function loadTrack(song) {
   destroyPlayers();
-  currentTrack = parseMusicUrl(song.url);
   setSpinning(false);
 
   const wrap = $("embed-wrap");
@@ -817,6 +952,15 @@ function loadTrack(song) {
   $("btn-yt-search").classList.add("hidden");
   $("btn-toggle-embed").classList.add("hidden");
   $("btn-toggle-embed").textContent = "👀 Visa spelaren";
+
+  // 30-sekunderssnutt från iTunes: pålitligast och helt osynlig – vinner
+  if (song.preview) {
+    currentTrack = { type: "preview", url: song.preview };
+    wrap.classList.add("empty");
+    return;
+  }
+
+  currentTrack = parseMusicUrl(song.url);
 
   if (currentTrack.type === "none") {
     wrap.classList.add("empty");
@@ -863,8 +1007,22 @@ function loadTrack(song) {
   }
 }
 
+function resetPlayButtons() {
+  setSpinning(false);
+  $("btn-pause").classList.add("hidden");
+  $("btn-play").classList.remove("hidden");
+}
+
 $("btn-play").onclick = () => {
-  if (currentTrack.type === "youtube" && ytPlayer?.playVideo) ytPlayer.playVideo();
+  if (currentTrack.type === "preview") {
+    if (!previewAudio) {
+      previewAudio = new Audio(currentTrack.url);
+      previewAudio.onended = resetPlayButtons;
+      previewAudio.onerror = () => { resetPlayButtons(); toast("Ljudsnutten gick inte att spela.", "err"); };
+    }
+    previewAudio.play().catch(() => toast("Kunde inte starta ljudet – försök igen.", "err"));
+  }
+  else if (currentTrack.type === "youtube" && ytPlayer?.playVideo) ytPlayer.playVideo();
   else if (currentTrack.type === "spotify" && spotifyController) spotifyController.play();
   else return;
   setSpinning(true);
@@ -873,11 +1031,10 @@ $("btn-play").onclick = () => {
 };
 
 $("btn-pause").onclick = () => {
-  if (currentTrack.type === "youtube" && ytPlayer?.pauseVideo) ytPlayer.pauseVideo();
+  if (currentTrack.type === "preview" && previewAudio) previewAudio.pause();
+  else if (currentTrack.type === "youtube" && ytPlayer?.pauseVideo) ytPlayer.pauseVideo();
   else if (currentTrack.type === "spotify" && spotifyController) spotifyController.pause();
-  setSpinning(false);
-  $("btn-pause").classList.add("hidden");
-  $("btn-play").classList.remove("hidden");
+  resetPlayButtons();
 };
 
 $("btn-toggle-embed").onclick = () => {
@@ -889,6 +1046,7 @@ $("btn-toggle-embed").onclick = () => {
 };
 
 function stopMusic() {
+  if (previewAudio) { try { previewAudio.pause(); } catch (_) {} }
   if (currentTrack.type === "youtube" && ytPlayer?.pauseVideo) { try { ytPlayer.pauseVideo(); } catch (_) {} }
   if (currentTrack.type === "spotify" && spotifyController) { try { spotifyController.pause(); } catch (_) {} }
   setSpinning(false);
@@ -931,6 +1089,9 @@ function startGame(names, target, songs) {
     revealed: false,
     bonusGiven: false,
     useTokens: store.settings.tokens,
+    locked: false,   // gissningen låst → utmaningsfas
+    bets: [],        // [{ p: spelarindex, slot }]
+    picking: null,   // spelarindex som just väljer lucka för sin utmaning
   };
   nextCard();
   showScreen("screen-game");
@@ -942,10 +1103,31 @@ function nextCard() {
   game.selectedSlot = null;
   game.revealed = false;
   game.bonusGiven = false;
+  game.locked = false;
+  game.bets = [];
+  game.picking = null;
   $("flip-card").classList.remove("flipped");
   loadTrack(game.card);
   saveGame();
   renderGame();
+}
+
+/* Får kortet plats i luckan `slot` på tidslinjen `tl`? */
+function slotFits(tl, slot, year) {
+  const before = slot === 0 ? null : tl[slot - 1];
+  const after = slot === tl.length ? null : tl[slot];
+  return (!before || before.year <= year) && (!after || year <= after.year);
+}
+
+function insertByYear(tl, card) {
+  let idx = tl.findIndex((s) => s.year > card.year);
+  if (idx === -1) idx = tl.length;
+  tl.splice(idx, 0, card);
+}
+
+function stealPossible() {
+  return game.useTokens &&
+    game.players.some((pl, i) => i !== game.current && (pl.tokens >= 1 || game.bets.some((b) => b.p === i)));
 }
 
 function currentPlayer() { return game.players[game.current]; }
@@ -956,17 +1138,63 @@ function renderGame() {
   $("timeline-heading").innerHTML =
     `${p.avatar} <b>${escapeHtml(p.name)}</b>s tidslinje · ${p.timeline.length}/${game.target}`;
   $("reveal-panel").classList.toggle("hidden", !game.revealed);
-  $("timeline-hint").classList.toggle("hidden", game.revealed);
-  $("btn-reveal").classList.toggle("hidden", game.revealed);
-  $("btn-reveal").disabled = game.selectedSlot === null;
+  $("timeline-hint").classList.toggle("hidden", game.revealed || game.locked);
   $("flip-card").classList.toggle("flipped", game.revealed);
   if (game.revealed) $("flip-year").textContent = game.card.year;
+
+  // Avslöja-/Lås-knappen
+  const btnReveal = $("btn-reveal");
+  btnReveal.classList.toggle("hidden", game.revealed);
+  btnReveal.disabled = game.selectedSlot === null || game.picking !== null;
+  btnReveal.textContent =
+    !game.locked && stealPossible() ? "🔒 Lås gissning" : "🎬 Avslöja!";
 
   // Byt låt-knapp (pollett)
   $("btn-skip-song").classList.toggle(
     "hidden",
-    !game.useTokens || game.revealed || p.tokens < 1
+    !game.useTokens || game.revealed || game.locked || p.tokens < 1
   );
+
+  // Utmaningspanelen
+  const cp = $("challenge-panel");
+  const inChallenge = game.locked && !game.revealed;
+  cp.classList.toggle("hidden", !inChallenge);
+  if (inChallenge) {
+    const hint = $("challenge-hint");
+    const act = $("challenge-actions");
+    act.innerHTML = "";
+    if (game.picking !== null) {
+      const ch = game.players[game.picking];
+      hint.innerHTML = `${ch.avatar} <b>${escapeHtml(ch.name)}</b>: tryck på luckan där <b>du</b> tror låten hör hemma!`;
+      const cancel = document.createElement("button");
+      cancel.className = "btn ghost small";
+      cancel.textContent = "Ångra";
+      cancel.onclick = () => { game.picking = null; renderGame(); };
+      act.appendChild(cancel);
+    } else {
+      hint.innerHTML = `😈 Tror ni att <b>${escapeHtml(p.name)}</b> har fel? Utmana för 1 🪙 – rätt lucka snor kortet!`;
+      game.players.forEach((pl2, idx) => {
+        if (idx === game.current) return;
+        const bet = game.bets.find((b) => b.p === idx);
+        const b2 = document.createElement("button");
+        b2.className = "btn secondary small";
+        if (bet) {
+          b2.textContent = `${pl2.avatar} ${pl2.name} har satsat ✕`;
+          b2.onclick = () => {
+            game.bets = game.bets.filter((b) => b.p !== idx);
+            pl2.tokens++;
+            saveGame(); renderGame();
+          };
+        } else if (pl2.tokens >= 1) {
+          b2.textContent = `😈 ${pl2.name} utmanar (1 🪙)`;
+          b2.onclick = () => { game.picking = idx; renderGame(); };
+        } else {
+          return;
+        }
+        act.appendChild(b2);
+      });
+    }
+  }
 
   // Poängtavla
   const sb = $("scoreboard");
@@ -987,10 +1215,27 @@ function renderGame() {
   const addSlot = (i) => {
     const b = document.createElement("button");
     b.className = "slot" + (game.selectedSlot === i ? " selected" : "");
-    b.textContent = "+";
+    const dots = game.bets
+      .filter((bet) => bet.slot === i)
+      .map((bet) => `<i style="background:${game.players[bet.p].color}" title="${escapeHtml(game.players[bet.p].name)}"></i>`)
+      .join("");
+    b.innerHTML = `+${dots ? `<span class="slot-dots">${dots}</span>` : ""}`;
     b.title = "Placera här";
-    b.disabled = game.revealed;
-    b.onclick = () => { game.selectedSlot = i; saveGame(); renderGame(); };
+    b.disabled = game.revealed || (game.locked && game.picking === null);
+    b.onclick = () => {
+      if (game.picking !== null) {
+        if (i === game.selectedSlot) { toast(`Välj en annan lucka än ${p.name}s!`, "warn"); return; }
+        const ch = game.players[game.picking];
+        ch.tokens--;
+        game.bets.push({ p: game.picking, slot: i });
+        game.picking = null;
+        sfx.token();
+        saveGame(); renderGame();
+      } else if (!game.locked) {
+        game.selectedSlot = i;
+        saveGame(); renderGame();
+      }
+    };
     tl.appendChild(b);
   };
   addSlot(0);
@@ -998,6 +1243,7 @@ function renderGame() {
     const c = document.createElement("div");
     c.className = "card" + (game.justPlaced === i ? " new-card" : "");
     c.innerHTML = `
+      ${s.art ? `<img class="card-art" src="${escapeHtml(s.art)}" alt="" loading="lazy">` : ""}
       <div class="card-year">${escapeHtml(s.year)}</div>
       <div class="card-info">${escapeHtml(s.title)}<br>${escapeHtml(s.artist)}</div>`;
     tl.appendChild(c);
@@ -1036,28 +1282,51 @@ $("btn-skip-song").onclick = () => {
 };
 
 $("btn-reveal").onclick = () => {
-  if (game.selectedSlot === null || game.revealed) return;
+  if (game.selectedSlot === null || game.revealed || game.picking !== null) return;
+  if (!game.locked && stealPossible()) {
+    game.locked = true;
+    saveGame();
+    renderGame();
+    return;
+  }
+  doReveal();
+};
+
+function doReveal() {
   stopMusic();
 
   const p = currentPlayer();
   const i = game.selectedSlot;
   const card = game.card;
-  const before = i === 0 ? null : p.timeline[i - 1];
-  const after = i === p.timeline.length ? null : p.timeline[i];
-  const correct =
-    (!before || before.year <= card.year) &&
-    (!after || card.year <= after.year);
+  const correct = slotFits(p.timeline, i, card.year);
+
+  // Stöld: om aktiva spelaren har fel vinner första utmanare med rätt lucka
+  let stealer = null;
+  if (!correct) {
+    const winningBet = game.bets.find((b) => slotFits(p.timeline, b.slot, card.year));
+    if (winningBet) stealer = game.players[winningBet.p];
+  }
 
   game.revealed = true;
+  game.picking = null;
   $("embed-wrap").classList.add("show-embed");
   $("flip-year").textContent = card.year;
   $("flip-card").classList.add("flipped");
 
   const res = $("reveal-result");
-  res.textContent = correct ? "✅ Rätt placerat!" : "❌ Fel plats!";
-  res.className = "reveal-result " + (correct ? "ok" : "fail");
+  if (correct) {
+    res.textContent = "✅ Rätt placerat!";
+    res.className = "reveal-result ok";
+  } else if (stealer) {
+    res.textContent = `😈 ${stealer.name} snor kortet!`;
+    res.className = "reveal-result ok";
+  } else {
+    res.textContent = "❌ Fel plats!";
+    res.className = "reveal-result fail";
+  }
 
   $("reveal-card").innerHTML = `
+    ${card.art ? `<img class="reveal-art" src="${escapeHtml(card.art)}" alt="">` : ""}
     <div class="card-year">${escapeHtml(card.year)}</div>
     <div class="card-title">${escapeHtml(card.title)}</div>
     <div class="card-artist">${escapeHtml(card.artist)}</div>`;
@@ -1080,6 +1349,17 @@ $("btn-reveal").onclick = () => {
       setTimeout(() => endGame(p), 1500);
       return;
     }
+  } else if (stealer) {
+    sfx.correct();
+    confetti.burst();
+    insertByYear(stealer.timeline, card);
+    toast(`😈 ${stealer.name} satsade rätt och stjäl kortet!`, "ok");
+    if (stealer.timeline.length >= game.target) {
+      saveGame();
+      renderGame();
+      setTimeout(() => endGame(stealer), 1500);
+      return;
+    }
   } else {
     sfx.wrong();
     const panel = document.querySelector(".timeline-panel");
@@ -1088,7 +1368,7 @@ $("btn-reveal").onclick = () => {
   }
   saveGame();
   renderGame();
-};
+}
 
 $("btn-bonus").onclick = () => {
   if (game.bonusGiven) return;
@@ -1161,3 +1441,5 @@ $("btn-play-again").onclick = () => {
 renderStart();
 addPlayerInput("Spelare 1");
 addPlayerInput("Spelare 2");
+importSharedFromHash();
+addEventListener("hashchange", importSharedFromHash);

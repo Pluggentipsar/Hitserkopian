@@ -76,6 +76,34 @@ Låtar utan årtal markeras med ⚠️ och hoppas över i spelet tills året är
 }
 ```
 
+## 🍎 Auto-komplettera låtdata
+
+Knappen **🍎 Auto-komplettera låtdata** i redigeraren slår upp låtarna i
+iTunes öppna sök-API (ingen inloggning behövs) och fyller i:
+
+- **Originalår** för låtar som saknar årtal
+- **Artist** och riktig titel för låtar som importerats som bara länkar
+- **Skivomslag** som visas på tidslinjen och när kortet avslöjas
+- **30-sekunders ljudsnutt** som spelas direkt i appen – osynligt, utan
+  YouTube/Spotify-inbäddningar, och fungerar även utan Spotify-konto
+
+Ljudsnutten används automatiskt i spelet när den finns; annars används
+Spotify-/YouTube-länken som tidigare.
+
+## 😈 Utmana och stjäl (polletter)
+
+När polletter är på kan de andra spelarna utmana: den aktiva spelaren
+**låser sin gissning**, sedan kan varje motspelare satsa 1 🪙 på en annan
+lucka. Har den aktiva fel och en utmanare rätt – då **stjäl utmanaren
+kortet** rakt in i sin egen tidslinje. Först satsad, först vinner.
+
+## 🔗 Dela spellistor via länk
+
+**🔗 Dela lista** kopierar en länk där hela spellistan är inbakad
+(komprimerad i själva URL:en – ingen server inblandad). Skicka länken till
+en kompis: när de öppnar den får de frågan att importera listan direkt i
+sin app, inklusive tidbits, omslag och ljudsnuttar.
+
 ## 🖨 Skriv ut riktiga kort
 
 I redigeraren finns **🖨 Skriv ut kort** – den gör om spellistan till
