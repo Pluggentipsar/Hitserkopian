@@ -3,67 +3,103 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0d0a1a">
   <title>Hitserkopian 🎵</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="https://www.youtube.com/iframe_api" async></script>
   <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
 </head>
 <body>
+  <div class="bg-blobs" aria-hidden="true"><i></i><i></i><i></i></div>
+  <canvas id="confetti-canvas"></canvas>
+  <div id="toasts"></div>
 
   <!-- ============ STARTSKÄRM ============ -->
   <section id="screen-start" class="screen active">
     <header class="hero">
-      <h1>🎵 Hitserkopian</h1>
-      <p class="tagline">Gissa var låten hör hemma på tidslinjen!</p>
+      <div class="logo-disc" aria-hidden="true"></div>
+      <h1>Hitserkopian</h1>
+      <p class="tagline">Hör låten. Gissa året. Bygg din tidslinje. 🎶</p>
     </header>
 
-    <div class="panel">
-      <h2>Spellista</h2>
-      <p id="start-playlist-info" class="muted"></p>
-      <button id="btn-open-editor" class="btn secondary">✏️ Redigera spellista</button>
+    <div id="resume-banner" class="panel resume hidden">
+      <div class="resume-text">
+        <b>⏸ Pågående spel!</b>
+        <span id="resume-info" class="muted"></span>
+      </div>
+      <div class="row">
+        <button id="btn-resume" class="btn primary">▶ Fortsätt</button>
+        <button id="btn-discard-game" class="btn ghost small">Släng</button>
+      </div>
     </div>
 
     <div class="panel">
-      <h2>Spelare</h2>
+      <div class="panel-head">
+        <h2>💿 Spellista</h2>
+        <button id="btn-new-playlist" class="btn ghost small">+ Ny lista</button>
+      </div>
+      <div id="playlist-picker" class="playlist-picker"></div>
+      <button id="btn-open-editor" class="btn secondary wide">✏️ Redigera vald lista</button>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>🎤 Spelare</h2>
+        <button id="btn-add-player" class="btn ghost small">+ Lägg till</button>
+      </div>
       <div id="player-inputs"></div>
-      <button id="btn-add-player" class="btn small secondary">+ Lägg till spelare</button>
     </div>
 
     <div class="panel">
-      <h2>Inställningar</h2>
-      <label class="field-inline">
-        Kort för att vinna:
-        <input type="number" id="input-target" min="2" max="20" value="5">
-      </label>
+      <h2>⚙️ Inställningar</h2>
+      <div class="setting-row">
+        <span>Kort för att vinna</span>
+        <div id="target-seg" class="seg">
+          <button data-v="5">5</button>
+          <button data-v="7">7</button>
+          <button data-v="10">10</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <span>Hitster-polletter <small class="muted">(byt låt / bonus)</small></span>
+        <button id="toggle-tokens" class="switch" role="switch" aria-checked="true"><i></i></button>
+      </div>
+      <div class="setting-row">
+        <span>Ljudeffekter</span>
+        <button id="toggle-sound" class="switch" role="switch" aria-checked="true"><i></i></button>
+      </div>
     </div>
 
-    <button id="btn-start-game" class="btn big primary">▶ Starta spelet</button>
+    <button id="btn-start-game" class="btn cta">▶ Starta spelet</button>
   </section>
 
   <!-- ============ SPELLISTE-REDIGERARE ============ -->
   <section id="screen-editor" class="screen">
     <header class="bar">
-      <button id="btn-editor-back" class="btn small secondary">← Tillbaka</button>
-      <h2>✏️ Spellista</h2>
+      <button id="btn-editor-back" class="btn ghost small">← Tillbaka</button>
+      <input type="text" id="input-playlist-name" class="playlist-name-input" placeholder="Spellistans namn">
+      <button id="btn-delete-playlist" class="btn ghost small danger" title="Ta bort listan">🗑</button>
     </header>
 
     <div class="panel">
-      <label class="field">
-        Spellistans namn
-        <input type="text" id="input-playlist-name" placeholder="Min spellista">
-      </label>
-    </div>
-
-    <div class="panel">
-      <h3 id="editor-song-form-title">Lägg till låt</h3>
+      <h3 id="editor-song-form-title">➕ Lägg till låt</h3>
       <div class="song-form">
-        <label class="field">Artist <input type="text" id="input-song-artist" placeholder="ABBA"></label>
-        <label class="field">Titel <input type="text" id="input-song-title" placeholder="Dancing Queen"></label>
-        <label class="field">År <input type="number" id="input-song-year" min="1900" max="2100" placeholder="1976"></label>
-        <label class="field">Spotify- eller YouTube-länk (valfri)
-          <input type="url" id="input-song-url" placeholder="https://open.spotify.com/track/… eller https://youtu.be/…">
-        </label>
-        <label class="field">Tidbit om artisten (valfri)
+        <div class="grid-2">
+          <label class="field">Artist <input type="text" id="input-song-artist" placeholder="ABBA"></label>
+          <label class="field">Titel <input type="text" id="input-song-title" placeholder="Dancing Queen"></label>
+        </div>
+        <div class="grid-2">
+          <label class="field">År <input type="number" id="input-song-year" min="1900" max="2100" placeholder="1976"></label>
+          <label class="field">Spotify/YouTube-länk
+            <input type="url" id="input-song-url" placeholder="https://open.spotify.com/track/…">
+          </label>
+        </div>
+        <label class="field">💡 Tidbit om artisten
           <textarea id="input-song-tidbit" rows="2" placeholder="Kul fakta som visas när kortet avslöjas…"></textarea>
         </label>
         <div class="row">
@@ -74,101 +110,108 @@
     </div>
 
     <div class="panel">
-      <h3>Låtar (<span id="editor-song-count">0</span>)</h3>
+      <div class="panel-head">
+        <h3>🎼 Låtar <span id="editor-song-count" class="pill"></span></h3>
+        <input type="search" id="input-song-search" class="search" placeholder="🔍 Sök…">
+      </div>
       <ul id="editor-song-list" class="song-list"></ul>
     </div>
 
     <div class="panel">
       <h3>🎧 Importera Spotify-spellista</h3>
       <p class="muted small-text">
-        <b>Bästa sättet:</b> exportera din spellista som CSV via
-        <a href="https://exportify.net" target="_blank" rel="noopener">Exportify</a>
-        – då följer artist, titel, år och låtlänk med automatiskt.<br>
-        <b>Snabbvägen:</b> markera låtarna i Spotify (Ctrl/Cmd+A), kopiera (Ctrl/Cmd+C)
-        och klistra in länkarna nedan – komplettera sedan årtal själv eller med Claude-knappen.
+        <b>Bästa sättet:</b> exportera listan som CSV via
+        <a href="https://exportify.net" target="_blank" rel="noopener">Exportify</a> –
+        artist, titel, år och länk följer med automatiskt.<br>
+        <b>Snabbvägen:</b> markera låtarna i Spotify (Ctrl/Cmd+A), kopiera och klistra in nedan.
       </p>
       <div class="row wrap">
-        <label class="btn secondary file-btn">📄 Importera CSV (Exportify)
+        <label class="btn secondary file-btn">📄 Importera CSV
           <input type="file" id="input-import-csv" accept=".csv,text/csv" hidden>
         </label>
       </div>
       <label class="field">Klistra in låtlänkar (en per rad)
-        <textarea id="input-paste-links" rows="4"
-          placeholder="https://open.spotify.com/track/…&#10;https://open.spotify.com/track/…"></textarea>
+        <textarea id="input-paste-links" rows="3"
+          placeholder="https://open.spotify.com/track/…"></textarea>
       </label>
       <button id="btn-import-links" class="btn secondary">🔗 Lägg till länkarna</button>
-      <p class="muted small-text">Låtar utan årtal markeras med ⚠️ och hoppas över i spelet tills året är ifyllt.</p>
     </div>
 
     <div class="panel">
-      <h3>Verktyg</h3>
+      <h3>🧰 Verktyg</h3>
       <div class="row wrap">
         <button id="btn-export" class="btn secondary">⬇️ Exportera JSON</button>
         <label class="btn secondary file-btn">⬆️ Importera JSON
           <input type="file" id="input-import" accept=".json,application/json" hidden>
         </label>
-        <button id="btn-copy-tidbit-prompt" class="btn secondary">🤖 Kopiera Claude-prompt för tidbits</button>
-        <button id="btn-load-sample" class="btn secondary">🎁 Ladda exempellistan</button>
+        <button id="btn-copy-tidbit-prompt" class="btn secondary">🤖 Claude-prompt</button>
+        <button id="btn-load-sample" class="btn secondary">🎁 Exempellistan</button>
       </div>
-      <p class="muted small-text">Tidbit-knappen kopierar en färdig fråga med alla dina låtar –
-        klistra in den i en chatt med Claude så får du tillbaka JSON med roliga fakta om varje artist.</p>
+      <p class="muted small-text">🤖-knappen kopierar en färdig fråga med hela listan – klistra in i en
+        chatt med Claude så fyller Claude i tidbits, saknade artister och årtal. Importera svaret som JSON.</p>
     </div>
   </section>
 
   <!-- ============ SPELSKÄRM ============ -->
   <section id="screen-game" class="screen">
     <header class="bar">
-      <button id="btn-quit" class="btn small secondary">✕ Avsluta</button>
-      <h2 id="game-status"></h2>
-      <span id="deck-count" class="pill"></span>
+      <button id="btn-quit" class="btn ghost small">✕</button>
+      <div id="scoreboard" class="scoreboard"></div>
+      <span id="deck-count" class="pill" title="Kort kvar i leken">🃏</span>
     </header>
 
-    <!-- Mysteriekortet + musikspelare -->
     <div class="panel mystery-panel">
-      <div id="mystery-card" class="card mystery">
-        <div class="card-year">?</div>
-        <div class="card-info">Mysterielåt</div>
+      <div class="vinyl-stage">
+        <div id="vinyl" class="vinyl">
+          <div class="vinyl-label">?</div>
+        </div>
+        <div id="flip-card" class="flip-card">
+          <div class="flip-inner">
+            <div class="flip-front">?</div>
+            <div class="flip-back"><span id="flip-year"></span></div>
+          </div>
+        </div>
       </div>
 
       <div id="music-controls" class="music-controls">
-        <button id="btn-play" class="btn primary big">▶ Spela låten</button>
-        <button id="btn-pause" class="btn secondary hidden">⏸ Pausa</button>
+        <button id="btn-play" class="btn play-btn" title="Spela låten">▶</button>
+        <button id="btn-pause" class="btn play-btn hidden" title="Pausa">⏸</button>
         <a id="btn-yt-search" class="btn secondary hidden" target="_blank" rel="noopener">🔎 Öppna YouTube-sökning</a>
-        <button id="btn-toggle-embed" class="btn small secondary hidden">👀 Visa spelaren (spoiler!)</button>
+        <button id="btn-skip-song" class="btn secondary small hidden" title="Kostar 1 pollett">🎲 Byt låt (−1 🪙)</button>
+        <button id="btn-toggle-embed" class="btn ghost small hidden">👀 Visa spelaren</button>
       </div>
 
       <div id="embed-wrap" class="embed-wrap">
         <div id="embed-holder"></div>
-        <div id="embed-cover" class="embed-cover">🙈 Spelaren är dold – inga spoilers!</div>
+        <div id="embed-cover" class="embed-cover">🙈 Inga spoilers här inte</div>
       </div>
     </div>
 
-    <!-- Avslöjat kort -->
     <div id="reveal-panel" class="panel reveal-panel hidden">
       <div id="reveal-result" class="reveal-result"></div>
       <div id="reveal-card" class="card revealed"></div>
       <p id="reveal-tidbit" class="tidbit"></p>
-      <button id="btn-next" class="btn primary big">➡ Nästa spelare</button>
+      <button id="btn-bonus" class="btn secondary hidden">🏅 Gissade artist + titel? +1 🪙</button>
+      <button id="btn-next" class="btn cta">➡ Nästa spelare</button>
     </div>
 
-    <!-- Aktiva spelarens tidslinje -->
-    <div class="panel">
+    <div class="panel timeline-panel">
       <h3 id="timeline-heading"></h3>
-      <p class="muted small-text" id="timeline-hint">Klicka på en lucka där du tror att låten hör hemma, avslöja sedan!</p>
+      <p class="muted small-text" id="timeline-hint">Tryck på en lucka <b>+</b> där du tror låten hör hemma!</p>
       <div id="timeline" class="timeline"></div>
-      <button id="btn-reveal" class="btn primary big" disabled>🎬 Avslöja!</button>
+      <button id="btn-reveal" class="btn cta" disabled>🎬 Avslöja!</button>
     </div>
 
-    <!-- Övriga spelare -->
     <div id="other-players" class="panel"></div>
   </section>
 
   <!-- ============ VINNARSKÄRM ============ -->
   <section id="screen-winner" class="screen">
-    <div class="panel center">
-      <h1>🏆</h1>
+    <div class="panel center winner-panel">
+      <div class="trophy">🏆</div>
       <h2 id="winner-text"></h2>
-      <button id="btn-play-again" class="btn primary big">🔁 Spela igen</button>
+      <div id="standings" class="standings"></div>
+      <button id="btn-play-again" class="btn cta">🔁 Spela igen</button>
     </div>
   </section>
 
