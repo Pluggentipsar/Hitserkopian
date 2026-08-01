@@ -79,6 +79,28 @@
     </div>
 
     <div class="panel">
+      <h3>🎧 Importera Spotify-spellista</h3>
+      <p class="muted small-text">
+        <b>Bästa sättet:</b> exportera din spellista som CSV via
+        <a href="https://exportify.net" target="_blank" rel="noopener">Exportify</a>
+        – då följer artist, titel, år och låtlänk med automatiskt.<br>
+        <b>Snabbvägen:</b> markera låtarna i Spotify (Ctrl/Cmd+A), kopiera (Ctrl/Cmd+C)
+        och klistra in länkarna nedan – komplettera sedan årtal själv eller med Claude-knappen.
+      </p>
+      <div class="row wrap">
+        <label class="btn secondary file-btn">📄 Importera CSV (Exportify)
+          <input type="file" id="input-import-csv" accept=".csv,text/csv" hidden>
+        </label>
+      </div>
+      <label class="field">Klistra in låtlänkar (en per rad)
+        <textarea id="input-paste-links" rows="4"
+          placeholder="https://open.spotify.com/track/…&#10;https://open.spotify.com/track/…"></textarea>
+      </label>
+      <button id="btn-import-links" class="btn secondary">🔗 Lägg till länkarna</button>
+      <p class="muted small-text">Låtar utan årtal markeras med ⚠️ och hoppas över i spelet tills året är ifyllt.</p>
+    </div>
+
+    <div class="panel">
       <h3>Verktyg</h3>
       <div class="row wrap">
         <button id="btn-export" class="btn secondary">⬇️ Exportera JSON</button>

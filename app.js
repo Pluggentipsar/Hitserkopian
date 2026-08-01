@@ -70,13 +70,22 @@ function savePlaylist() {
 }
 
 function normalizeSong(s) {
+  const y = Number(s.year);
   return {
     artist: String(s.artist ?? "").trim(),
     title: String(s.title ?? "").trim(),
-    year: Number(s.year),
+    year: Number.isFinite(y) && y > 0 ? y : 0, // 0 = år saknas
     url: String(s.url ?? "").trim(),
     tidbit: String(s.tidbit ?? "").trim(),
   };
+}
+
+function songExists(song) {
+  const key = (s) => `${s.artist}||${s.title}`.toLowerCase();
+  return playlist.songs.some(
+    (s) => (song.url && s.url === song.url) ||
+           (song.title && song.artist && key(s) === key(song))
+  );
 }
 
 /* ==========================================================================
@@ -110,12 +119,18 @@ $("btn-start-game").onclick = () => {
   if (names.length === 0) { alert("Lägg till minst en spelare!"); return; }
 
   const target = Math.max(2, parseInt($("input-target").value, 10) || 5);
+  const valid = playlist.songs.filter((s) => s.year > 0);
+  const skipped = playlist.songs.length - valid.length;
   const minSongs = names.length * 2 + 1;
-  if (playlist.songs.length < minSongs) {
-    alert(`Spellistan behöver minst ${minSongs} låtar för ${names.length} spelare.`);
+  if (valid.length < minSongs) {
+    alert(
+      `Spellistan behöver minst ${minSongs} spelbara låtar för ${names.length} spelare.` +
+      (skipped ? `\n(${skipped} låtar hoppas över eftersom årtal saknas – fyll i dem i redigeraren.)` : "")
+    );
     return;
   }
-  startGame(names, target);
+  if (skipped > 0 && !confirm(`${skipped} låtar saknar årtal och hoppas över. Starta ändå?`)) return;
+  startGame(names, target, valid);
 };
 
 /* ==========================================================================
@@ -136,14 +151,15 @@ function renderEditor() {
       const li = document.createElement("li");
       const flags =
         (parseMusicUrl(s.url).type !== "none" ? "🎧" : "🔎") +
-        (s.tidbit ? " 💡" : "");
+        (s.tidbit ? " 💡" : "") +
+        (s.year > 0 ? "" : " ⚠️");
       li.innerHTML = `
-        <span class="song-year">${escapeHtml(s.year)}</span>
+        <span class="song-year">${s.year > 0 ? escapeHtml(s.year) : "–"}</span>
         <span class="song-meta">
           <div class="t">${escapeHtml(s.title)}</div>
           <div class="a">${escapeHtml(s.artist)}</div>
         </span>
-        <span class="song-flags" title="🎧 = har länk, 🔎 = YouTube-sökning, 💡 = har tidbit">${flags}</span>
+        <span class="song-flags" title="🎧 = har länk, 🔎 = YouTube-sökning, 💡 = har tidbit, ⚠️ = årtal saknas">${flags}</span>
         <button class="btn small secondary" data-act="edit">✏️</button>
         <button class="btn small secondary" data-act="del">🗑</button>`;
       li.querySelector('[data-act="edit"]').onclick = () => beginEditSong(i);
@@ -187,8 +203,12 @@ $("btn-save-song").onclick = () => {
     url: $("input-song-url").value,
     tidbit: $("input-song-tidbit").value,
   });
-  if (!song.artist || !song.title || !Number.isFinite(song.year)) {
-    alert("Artist, titel och år måste fyllas i.");
+  if (!song.artist && !song.title) {
+    alert("Fyll i åtminstone artist eller titel.");
+    return;
+  }
+  if (song.year <= 0 &&
+      !confirm("Inget årtal angivet – låten hoppas över i spelet tills året är ifyllt. Spara ändå?")) {
     return;
   }
   if (editIndex === null) playlist.songs.push(song);
@@ -223,9 +243,7 @@ $("input-import").onchange = async (e) => {
   try {
     const p = JSON.parse(await file.text());
     if (!p || !Array.isArray(p.songs)) throw new Error("saknar 'songs'");
-    const songs = p.songs.map(normalizeSong).filter(
-      (s) => s.artist && s.title && Number.isFinite(s.year)
-    );
+    const songs = p.songs.map(normalizeSong).filter((s) => s.artist || s.title);
     if (songs.length === 0) throw new Error("inga giltiga låtar");
     playlist = { name: String(p.name ?? file.name.replace(/\.json$/i, "")), songs };
     savePlaylist();
@@ -246,29 +264,137 @@ $("btn-load-sample").onclick = () => {
 };
 
 $("btn-copy-tidbit-prompt").onclick = async () => {
-  const list = playlist.songs
-    .map((s) => `- ${s.artist} – ${s.title} (${s.year})`)
-    .join("\n");
+  const data = {
+    name: playlist.name || "Min spellista",
+    songs: playlist.songs,
+  };
   const prompt =
-`Hej Claude! Här är låtarna i min Hitster-spellista:
+`Hej Claude! Här är min Hitster-spellista som JSON:
 
-${list}
+${JSON.stringify(data, null, 2)}
 
-Skriv en kort, rolig och gärna överraskande "tidbit" på svenska (1–2 meningar) om artisten eller låten för varje rad. Svara med enbart JSON i exakt detta format, så jag kan importera det i mitt spel:
+Gör så här:
+1. Skriv en kort, rolig och gärna överraskande "tidbit" på svenska (1–2 meningar) om artisten eller låten i fältet "tidbit" för varje låt.
+2. Där "artist" är tom eller "year" är 0: fyll i artist och originalåret då låten först släpptes, om du känner igen låten (titeln och Spotify-länken i "url" är ledtrådar). Är du osäker på året, lämna 0.
+3. Ändra inget annat – behåll "title" och "url" exakt som de är.
 
-{
-  "name": ${JSON.stringify(playlist.name || "Min spellista")},
-  "songs": [
-    { "artist": "...", "title": "...", "year": 1976, "url": "", "tidbit": "..." }
-  ]
-}
-
-Behåll artist, titel och år exakt som i min lista (och befintliga url-fält om du känner till dem lämnar du tomma).`;
+Svara med enbart den kompletta JSON-filen (samma format) så att jag kan importera den direkt i spelet.`;
   try {
     await navigator.clipboard.writeText(prompt);
     alert("Prompt kopierad! Klistra in den i en chatt med Claude, spara svaret som .json och importera här.");
   } catch (_) {
     window.prompt("Kopiera texten manuellt:", prompt);
+  }
+};
+
+/* --- Spotify-import: CSV (Exportify) & inklistrade länkar --- */
+function parseCsv(text) {
+  const rows = [];
+  let row = [], cur = "", inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { cur += '"'; i++; }
+        else inQ = false;
+      } else cur += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ",") { row.push(cur); cur = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(cur); cur = "";
+      if (row.length > 1 || row[0].trim() !== "") rows.push(row);
+      row = [];
+    } else cur += c;
+  }
+  row.push(cur);
+  if (row.length > 1 || row[0].trim() !== "") rows.push(row);
+  return rows;
+}
+
+$("input-import-csv").onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const rows = parseCsv(await file.text());
+    if (rows.length < 2) throw new Error("filen verkar vara tom");
+    const header = rows[0].map((h) => h.trim().toLowerCase().replace(/^﻿/, ""));
+    const col = (...names) => header.findIndex((h) => names.some((n) => h.includes(n)));
+    const iTitle = col("track name", "song name", "title");
+    const iArtist = col("artist");
+    const iDate = col("release", "year");
+    const iUri = col("uri", "track url", "spotify url", "link");
+    if (iTitle < 0 || iArtist < 0)
+      throw new Error("hittar inga kolumner för titel/artist – är det en Exportify-CSV?");
+
+    let added = 0, dupes = 0, missingYear = 0;
+    for (const r of rows.slice(1)) {
+      const title = (r[iTitle] || "").trim();
+      const artist = (r[iArtist] || "").split(",")[0].trim();
+      if (!title && !artist) continue;
+      const ym = iDate >= 0 ? String(r[iDate] || "").match(/\d{4}/) : null;
+      const year = ym ? Number(ym[0]) : 0;
+      let url = "";
+      const uriMatch = iUri >= 0 ? (r[iUri] || "").match(/track[:/]([A-Za-z0-9]+)/) : null;
+      if (uriMatch) url = `https://open.spotify.com/track/${uriMatch[1]}`;
+      const song = normalizeSong({ artist, title, year, url, tidbit: "" });
+      if (songExists(song)) { dupes++; continue; }
+      if (song.year === 0) missingYear++;
+      playlist.songs.push(song);
+      added++;
+    }
+    savePlaylist();
+    renderEditor();
+    alert(
+      `Importerade ${added} låtar! 🎉` +
+      (dupes ? `\n${dupes} dubbletter hoppades över.` : "") +
+      (missingYear ? `\n⚠️ ${missingYear} låtar saknar årtal – fyll i eller använd Claude-knappen.` : "")
+    );
+  } catch (err) {
+    alert(`Kunde inte läsa CSV-filen: ${err.message}`);
+  }
+  e.target.value = "";
+};
+
+$("btn-import-links").onclick = async () => {
+  const btn = $("btn-import-links");
+  const urls = [...new Set(
+    $("input-paste-links").value.split(/\s+/).filter((u) => parseMusicUrl(u).type !== "none")
+  )];
+  if (urls.length === 0) {
+    alert("Hittade inga giltiga Spotify- eller YouTube-länkar.");
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "⏳ Hämtar låtinfo…";
+  try {
+    const songs = await Promise.all(urls.map(async (url) => {
+      let title = "";
+      if (parseMusicUrl(url).type === "spotify") {
+        try {
+          const res = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`);
+          if (res.ok) title = (await res.json()).title || "";
+        } catch (_) { /* offline eller blockerad – fyll i manuellt */ }
+      }
+      return normalizeSong({ artist: "", title: title || "Okänd låt (fyll i)", year: 0, url, tidbit: "" });
+    }));
+    let added = 0, dupes = 0;
+    for (const song of songs) {
+      if (songExists(song)) { dupes++; continue; }
+      playlist.songs.push(song);
+      added++;
+    }
+    savePlaylist();
+    renderEditor();
+    $("input-paste-links").value = "";
+    alert(
+      `La till ${added} låtar!` +
+      (dupes ? ` (${dupes} dubbletter hoppades över.)` : "") +
+      `\n⚠️ Årtal saknas – fyll i själv eller kopiera Claude-prompten så fixar Claude artist, år och tidbits.`
+    );
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "🔗 Lägg till länkarna";
   }
 };
 
@@ -379,8 +505,8 @@ function stopMusic() {
  * ========================================================================== */
 let game = null;
 
-function startGame(names, target) {
-  const deck = shuffle(playlist.songs);
+function startGame(names, target, songs) {
+  const deck = shuffle(songs);
   const players = names.map((name) => ({ name, timeline: [deck.pop()] }));
   players.forEach((p) => p.timeline.sort((a, b) => a.year - b.year));
 

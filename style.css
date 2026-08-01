@@ -43,6 +43,7 @@ body {
 .panel.center { text-align: center; }
 
 .muted { color: var(--muted); }
+a { color: var(--accent-2); }
 .small-text { font-size: 0.85rem; }
 
 .pill {

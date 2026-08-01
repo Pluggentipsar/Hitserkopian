@@ -41,6 +41,23 @@ npx serve .        # eller: python3 -m http.server 8000
 
 Spellistan sparas automatiskt i webbläsaren (localStorage).
 
+### Importera en hel Spotify-spellista
+
+Två sätt, båda utan Spotify-inloggning:
+
+1. **Exportify (rekommenderas)** – gå till [exportify.net](https://exportify.net),
+   logga in och exportera din spellista som CSV. Importera sedan filen via
+   **📄 Importera CSV (Exportify)** i redigeraren – artist, titel, årtal
+   (albumets releasedatum) och låtlänk följer med automatiskt.
+   Kontrollera gärna årtalen: för samlingsalbum kan releaseåret skilja sig
+   från låtens originalår.
+2. **Klistra in länkar** – markera alla låtar i Spotify-appen (Ctrl/Cmd+A),
+   kopiera (Ctrl/Cmd+C) och klistra in i rutan i redigeraren. Låttitlarna
+   hämtas automatiskt, men artist och årtal saknas – fyll i själv eller låt
+   Claude göra det (se nedan).
+
+Låtar utan årtal markeras med ⚠️ och hoppas över i spelet tills året är ifyllt.
+
 ### JSON-format
 
 ```json
@@ -61,9 +78,10 @@ Spellistan sparas automatiskt i webbläsaren (localStorage).
 ## 🤖 Låt Claude skriva tidbits
 
 I redigeraren finns knappen **🤖 Kopiera Claude-prompt för tidbits**. Den lägger
-en färdig fråga i urklipp – med alla dina låtar och rätt JSON-format. Klistra
-in den i en chatt med Claude, spara svaret som en `.json`-fil och importera den
-i redigeraren. Klart!
+en färdig fråga i urklipp – med hela din spellista som JSON. Klistra in den i en
+chatt med Claude, spara svaret som en `.json`-fil och importera den i
+redigeraren. Claude skriver tidbits **och** fyller i saknade artistnamn och
+årtal (praktiskt efter länk-import). Klart!
 
 ## Bra att veta om musiken
 
