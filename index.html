@@ -140,16 +140,19 @@
     <div class="panel">
       <h3>🧰 Verktyg</h3>
       <div class="row wrap">
+        <button id="btn-autofill" class="btn secondary">🍎 Auto-komplettera låtdata</button>
+        <button id="btn-share" class="btn secondary">🔗 Dela lista</button>
+        <button id="btn-print-cards" class="btn secondary">🖨 Skriv ut kort</button>
+        <button id="btn-copy-tidbit-prompt" class="btn secondary">🤖 Claude-prompt</button>
         <button id="btn-export" class="btn secondary">⬇️ Exportera JSON</button>
         <label class="btn secondary file-btn">⬆️ Importera JSON
           <input type="file" id="input-import" accept=".json,application/json" hidden>
         </label>
-        <button id="btn-copy-tidbit-prompt" class="btn secondary">🤖 Claude-prompt</button>
-        <button id="btn-print-cards" class="btn secondary">🖨 Skriv ut kort</button>
         <button id="btn-load-sample" class="btn secondary">🎁 Exempellistan</button>
       </div>
-      <p class="muted small-text">🤖-knappen kopierar en färdig fråga med hela listan – klistra in i en
-        chatt med Claude så fyller Claude i tidbits, saknade artister och årtal. Importera svaret som JSON.</p>
+      <p class="muted small-text">🍎 slår upp låtarna i iTunes och fyller i saknade årtal, artister,
+        skivomslag och 30-sekunders ljudsnuttar. 🔗 kopierar en länk med hela listan inbakad – skicka
+        till en kompis så importeras den direkt. 🤖 kopierar en färdig fråga till Claude för tidbits.</p>
     </div>
   </section>
 
@@ -200,6 +203,10 @@
       <h3 id="timeline-heading"></h3>
       <p class="muted small-text" id="timeline-hint">Tryck på en lucka <b>+</b> där du tror låten hör hemma!</p>
       <div id="timeline" class="timeline"></div>
+      <div id="challenge-panel" class="challenge hidden">
+        <div id="challenge-hint" class="small-text"></div>
+        <div id="challenge-actions" class="row wrap"></div>
+      </div>
       <button id="btn-reveal" class="btn cta" disabled>🎬 Avslöja!</button>
     </div>
 
