@@ -6,15 +6,21 @@ skrivna av Claude.
 
 ## Så spelar du
 
-1. Öppna `index.html` i en webbläsare (dubbelklicka räcker, men musikspelaren
-   fungerar bäst via en lokal server, se nedan).
-2. Lägg till spelare och tryck **Starta spelet**.
-3. Varje spelare börjar med ett kort på sin tidslinje.
-4. På din tur: tryck **▶ Spela låten** (spelaren är dold – inga spoilers!),
-   och klicka på luckan (`+`) i din tidslinje där du tror att låten hör hemma.
-5. Tryck **🎬 Avslöja!** – är året rätt placerat får du kortet, annars ryker det.
-   Samtidigt visas årtal, artist, titel och en 💡 tidbit om artisten.
-6. Först till målet (standard 5 kort, ställbart) vinner!
+Appen har tre vägar från hemskärmen: **🎮 Nytt spel**, **💿 Mina spellistor**
+och **📷 Skanna kort**.
+
+1. **Nytt spel**: lägg till spelare (namnen sparas till nästa kväll), välj
+   spellista, justera husreglerna om ni vill – och kör igång.
+2. Mellan varje tur visas en **"skicka mobilen"-skärm** så att nästa spelare
+   kan ta över utan att se något i förväg.
+3. På din tur: tryck **▶** (spelaren är dold – inga spoilers!), och klicka på
+   luckan (`+`) i din tidslinje där du tror att låten hör hemma.
+4. Tryck **🎬 Avslöja!** – är året rätt placerat får du kortet, annars ryker
+   det. Samtidigt visas årtal, artist, titel, omslag och en 💡 tidbit.
+5. Först till målet (standard 5 kort, ställbart) vinner!
+
+I **💿 Mina spellistor** hanterar du musiken: hämta från Spotify, ta emot från
+en kompis, bygg själv – eller börja med exempellistan.
 
 > Tips: låtar utan länk får i stället en **🔎 YouTube-sökning**-knapp som
 > öppnar sökresultatet i en ny flik, så att spelledaren kan trycka play där.

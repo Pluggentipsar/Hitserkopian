@@ -187,6 +187,9 @@ store.settings = {
   theme: "dark", mode: "classic", exactBonus: false,
   ...store.settings,
 };
+store.players = Array.isArray(store.players) && store.players.length
+  ? store.players
+  : ["Spelare 1", "Spelare 2"];
 
 function saveStore() {
   localStorage.setItem(STORE_KEY, JSON.stringify(store));
@@ -232,12 +235,30 @@ function parseMusicUrl(url) {
 }
 
 /* ==========================================================================
- * STARTSKÄRM
+ * NAVIGERING: HEM → NYTT SPEL / BIBLIOTEK / SKANNER
  * ========================================================================== */
-function renderStart() {
+let libraryReturn = "home"; // vart bibliotekets tillbaka-pil leder
+
+function goHome() { renderHome(); showScreen("screen-home"); }
+function goSetup() { renderSetup(); showScreen("screen-setup"); }
+function goLibrary(from) {
+  if (from) libraryReturn = from;
+  renderLibrary();
+  showScreen("screen-library");
+}
+
+/* ---------- Hem ---------- */
+function renderHome() {
   renderResume();
-  renderPlaylistPicker();
-  renderSettings();
+  const n = store.playlists.length;
+  $("home-library-count").textContent =
+    n === 1 ? "1 lista sparad" : `${n} listor sparade`;
+  const rec = $("home-record");
+  rec.classList.toggle("hidden", !store.highscore);
+  if (store.highscore) {
+    rec.textContent = `🏆 Solorekord: ${store.highscore.score} kort (${store.highscore.name})`;
+  }
+  applyTheme();
 }
 
 function renderResume() {
@@ -246,8 +267,73 @@ function renderResume() {
   if (saved) {
     const p = saved.players[saved.current];
     $("resume-info").textContent =
-      `${p.name} står på tur · ${saved.deck.length} kort kvar · mål ${saved.target}`;
+      `${p.name} står på tur · ${saved.deck.length} kort kvar i leken`;
   }
+}
+
+$("btn-home-play").onclick = goSetup;
+$("btn-home-library").onclick = () => goLibrary("home");
+$("btn-home-scan").onclick = () => startScanner();
+
+/* ---------- Nytt spel ---------- */
+function renderSetup() {
+  renderPlayerChips();
+  renderPlaylistPicker();
+  renderSettings();
+}
+
+function renderPlayerChips() {
+  const wrap = $("player-chips");
+  wrap.innerHTML = "";
+  store.players.forEach((name, i) => {
+    const color = COLORS[i % COLORS.length];
+    const chip = document.createElement("span");
+    chip.className = "p-chip";
+    chip.style.background = color + "22";
+    chip.style.borderColor = color + "77";
+    chip.innerHTML = `
+      <span class="avatar">${AVATARS[i % AVATARS.length]}</span>
+      <input value="${escapeHtml(name)}" maxlength="14" aria-label="Spelarnamn">
+      <button title="Ta bort">✕</button>`;
+    const input = chip.querySelector("input");
+    const resize = () => { input.style.width = `${Math.max(4, input.value.length + 1)}ch`; };
+    resize();
+    input.oninput = resize;
+    input.onchange = () => {
+      store.players[i] = input.value.trim() || `Spelare ${i + 1}`;
+      saveStore();
+      renderPlayerChips();
+    };
+    chip.querySelector("button").onclick = () => {
+      if (store.players.length <= 1) { toast("Någon måste ju spela! 🎤", "warn"); return; }
+      store.players.splice(i, 1);
+      saveStore();
+      renderPlayerChips();
+    };
+    wrap.appendChild(chip);
+  });
+
+  const add = document.createElement("button");
+  add.className = "p-chip p-chip-add";
+  add.textContent = "＋ Lägg till";
+  add.onclick = () => {
+    if (store.players.length >= 8) { toast("Max 8 spelare – annars blir kvällen lång! 😅", "warn"); return; }
+    store.players.push(`Spelare ${store.players.length + 1}`);
+    saveStore();
+    renderPlayerChips();
+    const inputs = wrap.querySelectorAll(".p-chip input");
+    const last = inputs[inputs.length - 1];
+    if (last) { last.focus(); last.select(); }
+  };
+  wrap.appendChild(add);
+}
+
+function coverMosaic(pl) {
+  const arts = pl.songs.filter((s) => s.art).map((s) => s.art).slice(0, 4);
+  if (arts.length === 0) return `<div class="pl-mosaic pl-mosaic-empty">🎵</div>`;
+  const cells = arts.map((a) => `<img src="${escapeHtml(a)}" alt="" loading="lazy">`);
+  while (cells.length < 4) cells.push("<i></i>");
+  return `<div class="pl-mosaic">${cells.join("")}</div>`;
 }
 
 function renderPlaylistPicker() {
@@ -258,8 +344,9 @@ function renderPlaylistPicker() {
     const div = document.createElement("div");
     div.className = "pl-card" + (pl.id === store.activeId ? " on" : "");
     div.innerHTML = `
+      ${coverMosaic(pl)}
       <div class="pl-name">${escapeHtml(pl.name || "Namnlös")}</div>
-      <div class="pl-meta">${pl.songs.length} låtar · ${playable} spelbara</div>`;
+      <div class="pl-meta">${playable ? `${playable} spelbara låtar` : "behöver årtal ⚠️"}</div>`;
     div.onclick = () => {
       store.activeId = pl.id;
       saveStore();
@@ -267,6 +354,101 @@ function renderPlaylistPicker() {
     };
     wrap.appendChild(div);
   });
+  const add = document.createElement("button");
+  add.className = "pl-card pl-card-add";
+  add.innerHTML = `<span class="pl-add-plus">＋</span><div class="pl-name">Hämta musik</div>`;
+  add.onclick = () => goLibrary("setup");
+  wrap.appendChild(add);
+}
+
+$("btn-setup-back").onclick = goHome;
+$("btn-setup-library").onclick = () => goLibrary("setup");
+
+/* ---------- Bibliotek & import ---------- */
+function renderLibrary() {
+  const grid = $("library-grid");
+  grid.innerHTML = "";
+  if (store.playlists.length === 0) {
+    grid.innerHTML = `<p class="muted small-text center-text">Inga listor än – hämta din musik nedan 👇</p>`;
+    return;
+  }
+  store.playlists.forEach((pl) => {
+    const playable = pl.songs.filter((s) => s.year > 0).length;
+    const div = document.createElement("button");
+    div.className = "lib-card";
+    div.innerHTML = `
+      ${coverMosaic(pl)}
+      <span class="lib-info">
+        <span class="pl-name">${escapeHtml(pl.name || "Namnlös")}</span>
+        <span class="pl-meta">${pl.songs.length} låtar · ${playable} spelbara${pl.id === store.activeId ? " · vald ✓" : ""}</span>
+      </span>
+      <span class="hi-arrow">→</span>`;
+    div.onclick = () => {
+      store.activeId = pl.id;
+      saveStore();
+      openEditor();
+    };
+    grid.appendChild(div);
+  });
+}
+
+$("btn-library-back").onclick = () => (libraryReturn === "setup" ? goSetup() : goHome());
+
+function openSheet(id) { $(id).classList.add("open"); }
+function closeSheets() {
+  document.querySelectorAll(".sheet").forEach((s) => s.classList.remove("open"));
+}
+document.querySelectorAll(".sheet [data-close]").forEach((el) => (el.onclick = closeSheets));
+
+$("path-spotify").onclick = () => openSheet("sheet-spotify");
+$("path-friend").onclick = () => openSheet("sheet-friend");
+$("path-scratch").onclick = () => {
+  const pl = { id: uid(), name: "Min nya lista", songs: [] };
+  store.playlists.push(pl);
+  store.activeId = pl.id;
+  saveStore();
+  openEditor();
+  $("editor-add-details").open = true;
+};
+$("path-sample").onclick = () => {
+  const pl = { id: uid(), name: SAMPLE_PLAYLIST.name, songs: structuredClone(SAMPLE_PLAYLIST.songs) };
+  store.playlists.push(pl);
+  store.activeId = pl.id;
+  saveStore();
+  renderLibrary();
+  toast("Exempellistan ligger i hyllan – redo att spelas! 🎁", "ok");
+};
+
+$("btn-import-share-link").onclick = async () => {
+  const v = $("input-share-link").value.trim();
+  const m = v.match(/#pl=(.+)$/);
+  if (!m) {
+    toast("Hmm, det där ser inte ut som en delningslänk – den ska innehålla #pl=…", "err");
+    return;
+  }
+  try {
+    const p = await decodeShare(decodeURIComponent(m[1]));
+    const pl = addImportedPlaylist(p);
+    $("input-share-link").value = "";
+    closeSheets();
+    renderLibrary();
+    toast(`”${pl.name}” importerad – tack kompisen! 💌`, "ok");
+    offerQuickStart(pl);
+  } catch (_) {
+    toast("Kunde inte läsa länken – be kompisen skicka en ny.", "err");
+  }
+};
+
+/* Gör om delad/importerad data till en ny lista i hyllan */
+function addImportedPlaylist(p) {
+  if (!p || !Array.isArray(p.songs)) throw new Error("fel format");
+  const songs = p.songs.map(normalizeSong).filter((s) => s.artist || s.title);
+  if (songs.length === 0) throw new Error("inga låtar");
+  const pl = { id: uid(), name: p.name || "Importerad lista", songs };
+  store.playlists.push(pl);
+  store.activeId = pl.id;
+  saveStore();
+  return pl;
 }
 
 function renderSettings() {
@@ -280,6 +462,11 @@ function renderSettings() {
   $("toggle-sound").setAttribute("aria-checked", String(store.settings.sound));
   $("toggle-exact").setAttribute("aria-checked", String(store.settings.exactBonus));
   $("toggle-theme").setAttribute("aria-checked", String(store.settings.theme === "light"));
+  $("rules-summary").textContent = [
+    `först till ${store.settings.target}`,
+    store.settings.mode === "decade" ? "🧒 decennium" : "🎯 klassiskt",
+    store.settings.tokens ? "🪙 polletter" : "utan polletter",
+  ].join(" · ");
   applyTheme();
 }
 
@@ -314,40 +501,8 @@ $("toggle-theme").onclick = () => {
   renderSettings();
 };
 
-function addPlayerInput(value = "") {
-  const wrap = $("player-inputs");
-  const i = wrap.children.length;
-  const row = document.createElement("div");
-  row.className = "player-input-row";
-  row.innerHTML = `
-    <span class="avatar" style="background:${COLORS[i % COLORS.length]}33">${AVATARS[i % AVATARS.length]}</span>
-    <input type="text" placeholder="Spelarnamn" value="${escapeHtml(value)}" maxlength="20">
-    <button class="btn ghost small" title="Ta bort">✕</button>`;
-  row.querySelector("button").onclick = () => {
-    if (wrap.children.length > 1) row.remove();
-  };
-  wrap.appendChild(row);
-}
-
-$("btn-add-player").onclick = () => {
-  if ($("player-inputs").children.length >= 8) { toast("Max 8 spelare!", "warn"); return; }
-  addPlayerInput();
-};
-
-$("btn-new-playlist").onclick = () => {
-  const pl = { id: uid(), name: "Ny spellista", songs: [] };
-  store.playlists.push(pl);
-  store.activeId = pl.id;
-  saveStore();
-  openEditor();
-};
-
-$("btn-open-editor").onclick = openEditor;
-
 function tryStartGame() {
-  const names = [...$("player-inputs").querySelectorAll("input")]
-    .map((i) => i.value.trim())
-    .filter(Boolean);
+  const names = store.players.map((n) => n.trim()).filter(Boolean);
   if (names.length === 0) { toast("Lägg till minst en spelare!", "err"); return false; }
 
   const pl = currentPlaylist();
@@ -356,12 +511,13 @@ function tryStartGame() {
   const minSongs = names.length + 3;
   if (valid.length < minSongs) {
     toast(
-      `”${pl.name}” behöver minst ${minSongs} spelbara låtar för ${names.length} spelare.` +
-      (skipped ? ` (${skipped} saknar årtal.)` : ""), "err"
+      `”${pl.name}” behöver minst ${minSongs} låtar med årtal för ${names.length} spelare.` +
+      (skipped ? ` Öppna listan och tryck 🍎 Komplettera – det brukar lösa det!` : " Fyll på med mer musik i biblioteket!"),
+      "err"
     );
     return false;
   }
-  if (skipped > 0) toast(`${skipped} låtar utan årtal hoppas över.`, "warn");
+  if (skipped > 0) toast(`${skipped} låtar utan årtal sitter kvar på bänken denna omgång.`, "warn");
   localStorage.removeItem(GAME_KEY);
   startGame(names, store.settings.target, valid);
   return true;
@@ -376,18 +532,18 @@ function offerQuickStart(pl) {
   if (!confirm(`🎉 ”${pl.name}” är redo (${playable} spelbara låtar).\nStarta en ny omgång direkt?`)) return;
   store.activeId = pl.id;
   saveStore();
-  renderStart();
-  if (!tryStartGame()) showScreen("screen-start");
+  if (!tryStartGame()) goSetup();
 }
 
 $("btn-resume").onclick = () => {
   const saved = loadSavedGame();
   if (!saved) { renderResume(); return; }
   game = saved;
+  playerUI = PLAYER_UIS.game;
   loadTrack(game.card);
   showScreen("screen-game");
   renderGame();
-  toast("Välkomna tillbaka! 🎶", "ok");
+  toast("Välkomna tillbaka – där ni slutade! 🎶", "ok");
 };
 
 $("btn-discard-game").onclick = () => {
@@ -413,6 +569,7 @@ function renderEditor() {
   const pl = currentPlaylist();
   $("input-playlist-name").value = pl.name || "";
   $("editor-song-count").textContent = pl.songs.length;
+  $("editor-empty").classList.toggle("hidden", pl.songs.length > 0);
 
   const q = $("input-song-search").value.trim().toLowerCase();
   const ul = $("editor-song-list");
@@ -454,6 +611,7 @@ $("input-song-search").oninput = renderEditor;
 function beginEditSong(i) {
   const s = currentPlaylist().songs[i];
   editIndex = i;
+  $("editor-add-details").open = true;
   $("editor-song-form-title").textContent = "✏️ Redigera låt";
   $("input-song-artist").value = s.artist;
   $("input-song-title").value = s.title;
@@ -471,6 +629,7 @@ function clearSongForm() {
   ["input-song-artist", "input-song-title", "input-song-year",
    "input-song-url", "input-song-tidbit"].forEach((id) => ($(id).value = ""));
   $("btn-cancel-edit").classList.add("hidden");
+  $("editor-add-details").open = false;
 }
 
 $("btn-save-song").onclick = () => {
@@ -514,15 +673,13 @@ $("btn-delete-playlist").onclick = () => {
   }
   store.activeId = store.playlists[0].id;
   saveStore();
-  renderStart();
-  showScreen("screen-start");
-  toast("Listan borttagen.", "warn");
+  goLibrary();
+  toast("Listan är borta. 👋", "warn");
 };
 
 $("btn-editor-back").onclick = () => {
   clearSongForm();
-  renderStart();
-  showScreen("screen-start");
+  goLibrary();
 };
 
 /* --- Export / import / exempel --- */
@@ -544,38 +701,18 @@ $("input-import").onchange = async (e) => {
   if (!file) return;
   try {
     const p = JSON.parse(await file.text());
-    if (!p || !Array.isArray(p.songs)) throw new Error("saknar 'songs'");
-    const songs = p.songs.map(normalizeSong).filter((s) => s.artist || s.title);
-    if (songs.length === 0) throw new Error("inga giltiga låtar");
-    const name = String(p.name ?? file.name.replace(/\.json$/i, ""));
-    const existing = store.playlists.find((x) => x.name === name);
-    let pl;
-    if (existing && confirm(`”${name}” finns redan – ersätta den? (Avbryt = skapa ny lista)`)) {
-      existing.songs = songs;
-      store.activeId = existing.id;
-      pl = existing;
-    } else {
-      pl = { id: uid(), name: existing ? `${name} (2)` : name, songs };
-      store.playlists.push(pl);
-      store.activeId = pl.id;
-    }
+    if (p && !p.name) p.name = file.name.replace(/\.json$/i, "");
+    const pl = addImportedPlaylist(p);
+    if (store.playlists.some((x) => x !== pl && x.name === pl.name)) pl.name += " (2)";
     saveStore();
-    renderEditor();
-    toast(`Importerade ${songs.length} låtar! 🎉`, "ok");
+    closeSheets();
+    openEditor();
+    toast(`”${pl.name}” importerad – ${pl.songs.length} låtar! 🎉`, "ok");
     offerQuickStart(pl);
   } catch (err) {
     toast(`Kunde inte läsa filen: ${err.message}`, "err");
   }
   e.target.value = "";
-};
-
-$("btn-load-sample").onclick = () => {
-  const pl = { id: uid(), name: SAMPLE_PLAYLIST.name, songs: structuredClone(SAMPLE_PLAYLIST.songs) };
-  store.playlists.push(pl);
-  store.activeId = pl.id;
-  saveStore();
-  renderEditor();
-  toast("Exempellistan tillagd som ny lista! 🎁", "ok");
 };
 
 $("btn-copy-tidbit-prompt").onclick = async () => {
@@ -715,18 +852,13 @@ async function importSharedFromHash() {
   try {
     const p = await decodeShare(decodeURIComponent(m[1]));
     if (!p || !Array.isArray(p.songs)) throw new Error("fel format");
-    const songs = p.songs.map(normalizeSong).filter((s) => s.artist || s.title);
-    if (songs.length === 0) throw new Error("inga låtar");
-    if (!confirm(`📩 Någon har delat spellistan ”${p.name || "Namnlös"}” (${songs.length} låtar) med dig.\nImportera den?`)) return;
-    const pl = { id: uid(), name: p.name || "Delad lista", songs };
-    store.playlists.push(pl);
-    store.activeId = pl.id;
-    saveStore();
-    renderStart();
-    toast("Delad lista importerad! 🎉", "ok");
+    if (!confirm(`📩 Någon har delat spellistan ”${p.name || "Namnlös"}” (${p.songs.length} låtar) med dig.\nLägga den i din hylla?`)) return;
+    const pl = addImportedPlaylist(p);
+    renderHome();
+    toast(`”${pl.name}” ligger nu i din hylla! 🎉`, "ok");
     offerQuickStart(pl);
   } catch (_) {
-    toast("Kunde inte läsa den delade länken.", "err");
+    toast("Kunde inte läsa den delade länken – be om en ny.", "err");
   }
 }
 
@@ -893,11 +1025,12 @@ $("input-import-csv").onchange = async (e) => {
       added++;
     }
     saveStore();
-    renderEditor();
+    closeSheets();
+    openEditor();
     toast(
-      `Importerade ${added} låtar till ”${pl.name}”! 🎉` +
+      `${added} låtar in i ”${pl.name}”! 🎉` +
       (dupes ? ` ${dupes} dubbletter hoppades över.` : "") +
-      (missingYear ? ` ⚠️ ${missingYear} saknar årtal.` : ""), "ok"
+      (missingYear ? ` ⚠️ ${missingYear} saknar årtal – tryck 🍎 Komplettera.` : ""), "ok"
     );
     offerQuickStart(pl);
   } catch (err) {
@@ -936,11 +1069,12 @@ $("btn-import-links").onclick = async () => {
       added++;
     }
     saveStore();
-    renderEditor();
+    closeSheets();
+    openEditor();
     $("input-paste-links").value = "";
     toast(
       `La till ${added} låtar!` + (dupes ? ` (${dupes} dubbletter.)` : "") +
-      ` ⚠️ Komplettera årtal – eller låt Claude fixa det via 🤖-knappen.`, "warn"
+      ` Tryck 🍎 Komplettera så hämtas årtal, omslag och ljud.`, "warn"
     );
   } finally {
     btn.disabled = false;
@@ -1242,11 +1376,8 @@ $("btn-scan-back").onclick = () => {
   stopMusic();
   destroyPlayers();
   playerUI = PLAYER_UIS.game;
-  renderStart();
-  showScreen("screen-start");
+  goHome();
 };
-
-$("btn-open-scanner").onclick = startScanner;
 
 /* ==========================================================================
  * SPELET
@@ -1317,7 +1448,21 @@ function startGame(names, target, songs) {
   if (game.solo) toast("🧑‍🎤 Soloträning: bygg så långt du kan – ett fel och det är över!", "warn");
   nextCard();
   showScreen("screen-game");
+  if (!game.solo) showHandoff("Först ut:");
 }
+
+/* "Skicka mobilen"-ögonblicket: nästa spelare tar över utan att tjuvkika */
+function showHandoff(prefix = "Din tur,") {
+  const p = currentPlayer();
+  const av = $("handoff-avatar");
+  av.textContent = p.avatar;
+  av.style.background = `${p.color}33`;
+  av.style.borderColor = p.color;
+  $("handoff-title").textContent = `${prefix} ${p.name}!`;
+  $("handoff").classList.remove("hidden");
+}
+
+$("btn-handoff-go").onclick = () => $("handoff").classList.add("hidden");
 
 function nextCard() {
   if (game.deck.length === 0) {
@@ -1678,6 +1823,7 @@ $("btn-next").onclick = () => {
     game.current = (game.current + 1) % game.players.length;
   }
   nextCard();
+  if (!game.solo && game.players.length > 1) showHandoff();
 };
 
 function endGame(winner) {
@@ -1739,25 +1885,21 @@ function endGame(winner) {
 }
 
 $("btn-quit").onclick = () => {
-  if (confirm("Avsluta spelet? (Det sparas inte.)")) {
+  if (confirm("Avsluta spelet? (Omgången slängs.)")) {
     stopMusic();
     destroyPlayers();
     localStorage.removeItem(GAME_KEY);
-    renderStart();
-    showScreen("screen-start");
+    $("handoff").classList.add("hidden");
+    goHome();
   }
 };
 
-$("btn-play-again").onclick = () => {
-  renderStart();
-  showScreen("screen-start");
-};
+$("btn-play-again").onclick = goSetup;
+$("btn-winner-home").onclick = goHome;
 
 /* ==========================================================================
  * Init
  * ========================================================================== */
-renderStart();
-addPlayerInput("Spelare 1");
-addPlayerInput("Spelare 2");
+renderHome();
 importSharedFromHash();
 addEventListener("hashchange", importSharedFromHash);
