@@ -76,6 +76,20 @@ Låtar utan årtal markeras med ⚠️ och hoppas över i spelet tills året är
 }
 ```
 
+## 🖨 Skriv ut riktiga kort
+
+I redigeraren finns **🖨 Skriv ut kort** – den gör om spellistan till
+utskrivbara spelkort i A4-format (12 kort per ark, ca 60×60 mm):
+
+- **Framsidan**: en QR-kod som öppnar låten (Spotify/YouTube). Låtar utan
+  länk får en QR-kod som öppnar en YouTube-sökning.
+- **Baksidan**: artist, årtal och titel.
+
+Skriv ut **dubbelsidigt** med **”Vänd längs långsidan”** – baksidorna är
+spegelvända per rad så att rätt info hamnar bakom rätt QR-kod. Klipp längs
+de streckade linjerna, blanda och spela precis som med riktiga Hitster-kort:
+skanna med mobilen, lyssna och gissa!
+
 ## 🤖 Låt Claude skriva tidbits
 
 I redigeraren finns knappen **🤖 Kopiera Claude-prompt för tidbits**. Den lägger

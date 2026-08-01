@@ -145,6 +145,7 @@
           <input type="file" id="input-import" accept=".json,application/json" hidden>
         </label>
         <button id="btn-copy-tidbit-prompt" class="btn secondary">🤖 Claude-prompt</button>
+        <button id="btn-print-cards" class="btn secondary">🖨 Skriv ut kort</button>
         <button id="btn-load-sample" class="btn secondary">🎁 Exempellistan</button>
       </div>
       <p class="muted small-text">🤖-knappen kopierar en färdig fråga med hela listan – klistra in i en
@@ -205,6 +206,24 @@
     <div id="other-players" class="panel"></div>
   </section>
 
+  <!-- ============ UTSKRIFT AV KORT ============ -->
+  <section id="screen-print" class="screen">
+    <header class="bar no-print">
+      <button id="btn-print-back" class="btn ghost small">← Tillbaka</button>
+      <h2 id="print-title"></h2>
+      <button id="btn-do-print" class="btn primary">🖨 Skriv ut</button>
+    </header>
+    <div class="panel no-print">
+      <p class="small-text muted" style="margin:0">
+        📄 Skriv ut <b>dubbelsidigt</b> och välj <b>”Vänd längs långsidan”</b> (flip on long edge) –
+        då hamnar QR-koden och låtinfon på samma kort. Sidorna kommer parvis:
+        först QR-framsidor, sedan baksidor. Klipp längs de streckade linjerna. ✂️<br>
+        Kort utan länk får en QR-kod som öppnar en YouTube-sökning på låten.
+      </p>
+    </div>
+    <div id="print-pages"></div>
+  </section>
+
   <!-- ============ VINNARSKÄRM ============ -->
   <section id="screen-winner" class="screen">
     <div class="panel center winner-panel">
@@ -215,6 +234,7 @@
     </div>
   </section>
 
+  <script src="qrcode.js"></script>
   <script src="sample-playlist.js"></script>
   <script src="app.js"></script>
 </body>

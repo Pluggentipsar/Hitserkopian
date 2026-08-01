@@ -567,6 +567,103 @@ Svara med enbart den kompletta JSON-filen (samma format) så att jag kan importe
   }
 };
 
+/* --- Utskrift av kort (QR-framsida + info-baksida) --- */
+function songQrUrl(song) {
+  if (parseMusicUrl(song.url).type !== "none") return song.url;
+  return "https://www.youtube.com/results?search_query=" +
+    encodeURIComponent(`${song.artist} ${song.title}`);
+}
+
+function qrSvg(text) {
+  const qr = qrcode(0, "M");
+  qr.addData(text);
+  qr.make();
+  return qr.createSvgTag({ cellSize: 2, margin: 0, scalable: true });
+}
+
+function renderPrint() {
+  const pl = currentPlaylist();
+  const songs = pl.songs.filter((s) => s.year > 0);
+  $("print-title").textContent = `${pl.name} · ${songs.length} kort`;
+
+  const wrap = $("print-pages");
+  wrap.innerHTML = "";
+  const PER_PAGE = 12, COLS = 3;
+
+  const frontCard = (s) => {
+    const d = document.createElement("div");
+    d.className = "pcard pcard-front";
+    let svg;
+    try { svg = qrSvg(songQrUrl(s)); }
+    catch (_) { svg = "<span style='font-size:3mm'>QR gick inte att skapa</span>"; }
+    d.innerHTML = `<div class="pqr">${svg}</div><div class="pbrand">🎵 HITSERKOPIAN</div>`;
+    return d;
+  };
+  const backCard = (s) => {
+    const d = document.createElement("div");
+    d.className = "pcard pcard-back";
+    d.innerHTML = `
+      <div class="pa">${escapeHtml(s.artist)}</div>
+      <div class="py">${escapeHtml(s.year)}</div>
+      <div class="pt">${escapeHtml(s.title)}</div>`;
+    return d;
+  };
+  const emptyCell = () => {
+    const d = document.createElement("div");
+    d.className = "pcard pcard-empty";
+    return d;
+  };
+  const label = (text) => {
+    const d = document.createElement("div");
+    d.className = "page-label";
+    d.textContent = text;
+    return d;
+  };
+
+  for (let off = 0; off < songs.length; off += PER_PAGE) {
+    const chunk = songs.slice(off, off + PER_PAGE);
+    const pageNo = off / PER_PAGE + 1;
+
+    // Framsida: QR-koder i läsordning (fyll ut sista raden så speglingen stämmer)
+    const padded = [...chunk];
+    while (padded.length % COLS) padded.push(null);
+
+    const front = document.createElement("div");
+    front.className = "print-page";
+    padded.forEach((s) => front.appendChild(s ? frontCard(s) : emptyCell()));
+
+    // Baksida: varje rad spegelvänd, så dubbelsidig utskrift (vänd längs
+    // långsidan) lägger rätt info bakom rätt QR-kod
+    const back = document.createElement("div");
+    back.className = "print-page";
+    for (let r = 0; r < padded.length; r += COLS) {
+      padded.slice(r, r + COLS).reverse()
+        .forEach((s) => back.appendChild(s ? backCard(s) : emptyCell()));
+    }
+
+    wrap.appendChild(label(`Ark ${pageNo} – framsidor (QR)`));
+    wrap.appendChild(front);
+    wrap.appendChild(label(`Ark ${pageNo} – baksidor (år/artist/titel)`));
+    wrap.appendChild(back);
+  }
+}
+
+$("btn-print-cards").onclick = () => {
+  const pl = currentPlaylist();
+  const printable = pl.songs.filter((s) => s.year > 0).length;
+  if (printable === 0) {
+    toast("Inga låtar med årtal att skriva ut ännu.", "err");
+    return;
+  }
+  const skipped = pl.songs.length - printable;
+  if (skipped > 0) toast(`${skipped} låtar utan årtal hoppas över.`, "warn");
+  renderPrint();
+  showScreen("screen-print");
+};
+
+$("btn-print-back").onclick = () => showScreen("screen-editor");
+$("btn-do-print").onclick = () => window.print();
+
 /* --- Spotify-import: CSV (Exportify) & inklistrade länkar --- */
 function parseCsv(text) {
   const rows = [];
