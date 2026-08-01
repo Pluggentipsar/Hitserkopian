@@ -66,16 +66,43 @@
         </div>
       </div>
       <div class="setting-row">
-        <span>Hitster-polletter <small class="muted">(byt låt / bonus)</small></span>
+        <span>Spelläge <small class="muted">(decennium = rätt årtionde räcker)</small></span>
+        <div id="mode-seg" class="seg">
+          <button data-m="classic">🎯 Klassiskt</button>
+          <button data-m="decade">🧒 Decennium</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <span>Hitster-polletter <small class="muted">(byt låt / utmana / bonus)</small></span>
         <button id="toggle-tokens" class="switch" role="switch" aria-checked="true"><i></i></button>
+      </div>
+      <div class="setting-row">
+        <span>Exakt år-bonus <small class="muted">(+1 🪙 vid rätt årtal)</small></span>
+        <button id="toggle-exact" class="switch" role="switch" aria-checked="false"><i></i></button>
       </div>
       <div class="setting-row">
         <span>Ljudeffekter</span>
         <button id="toggle-sound" class="switch" role="switch" aria-checked="true"><i></i></button>
       </div>
+      <div class="setting-row">
+        <span>☀️ Ljust tema</span>
+        <button id="toggle-theme" class="switch" role="switch" aria-checked="false"><i></i></button>
+      </div>
+      <p class="muted small-text" style="margin:8px 0 0">
+        🧑‍🎤 Tips: en ensam spelare startar <b>soloträning</b> – bygg så lång tidslinje du kan,
+        ett fel och omgången är över. Rekordet sparas!</p>
     </div>
 
     <button id="btn-start-game" class="btn cta">▶ Starta spelet</button>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>🃏 Fysiska kort</h2>
+      </div>
+      <p class="muted small-text" style="margin:0 0 10px">Har ni skrivit ut korten? Skanna QR-koden
+        med kameran så spelas låten <b>dolt i appen</b> – ingen Spotify-app som avslöjar titeln.</p>
+      <button id="btn-open-scanner" class="btn secondary wide">📷 Skanna kort</button>
+    </div>
   </section>
 
   <!-- ============ SPELLISTE-REDIGERARE ============ -->
@@ -178,6 +205,7 @@
       </div>
 
       <div id="music-controls" class="music-controls">
+        <div id="eq-game" class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
         <button id="btn-play" class="btn play-btn" title="Spela låten">▶</button>
         <button id="btn-pause" class="btn play-btn hidden" title="Pausa">⏸</button>
         <a id="btn-yt-search" class="btn secondary hidden" target="_blank" rel="noopener">🔎 Öppna YouTube-sökning</a>
@@ -195,7 +223,10 @@
       <div id="reveal-result" class="reveal-result"></div>
       <div id="reveal-card" class="card revealed"></div>
       <p id="reveal-tidbit" class="tidbit"></p>
-      <button id="btn-bonus" class="btn secondary hidden">🏅 Gissade artist + titel? +1 🪙</button>
+      <div class="row wrap" style="justify-content:center">
+        <button id="btn-bonus" class="btn secondary hidden">🏅 Artist + titel? +1 🪙</button>
+        <button id="btn-exact" class="btn secondary hidden">🎯 Exakta året? +1 🪙</button>
+      </div>
       <button id="btn-next" class="btn cta">➡ Nästa spelare</button>
     </div>
 
@@ -211,6 +242,48 @@
     </div>
 
     <div id="other-players" class="panel"></div>
+  </section>
+
+  <!-- ============ QR-SKANNER ============ -->
+  <section id="screen-scan" class="screen">
+    <header class="bar">
+      <button id="btn-scan-back" class="btn ghost small">← Tillbaka</button>
+      <h2>📷 Skanna kort</h2>
+    </header>
+
+    <div id="scan-view" class="panel scan-view">
+      <div class="scan-frame">
+        <video id="scan-video" playsinline muted></video>
+        <div class="scan-corners" aria-hidden="true"></div>
+      </div>
+      <p class="muted small-text center-text">Rikta kameran mot QR-koden på ett kort…</p>
+      <p id="scan-error" class="small-text center-text hidden"></p>
+    </div>
+
+    <div id="scan-result" class="panel mystery-panel hidden">
+      <div class="vinyl-stage">
+        <div id="scan-vinyl" class="vinyl"><div class="vinyl-label">?</div></div>
+      </div>
+      <div class="music-controls">
+        <div id="eq-scan" class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        <button id="btn-scan-play" class="btn play-btn" title="Spela låten">▶</button>
+        <button id="btn-scan-pause" class="btn play-btn hidden" title="Pausa">⏸</button>
+        <a id="btn-scan-yt" class="btn secondary hidden" target="_blank" rel="noopener">🔎 Öppna YouTube-sökning</a>
+        <button id="btn-scan-toggle" class="btn ghost small hidden">👀 Visa spelaren</button>
+      </div>
+      <div id="scan-embed-wrap" class="embed-wrap">
+        <div id="scan-embed-holder"></div>
+        <div class="embed-cover">🙈 Inga spoilers här inte</div>
+      </div>
+      <div id="scan-reveal" class="hidden">
+        <div id="scan-reveal-card" class="card revealed"></div>
+        <p id="scan-tidbit" class="tidbit"></p>
+      </div>
+      <div class="row wrap" style="justify-content:center; margin-top:12px">
+        <button id="btn-scan-reveal" class="btn primary">🎬 Avslöja!</button>
+        <button id="btn-scan-next" class="btn secondary">📷 Skanna nästa</button>
+      </div>
+    </div>
   </section>
 
   <!-- ============ UTSKRIFT AV KORT ============ -->
@@ -242,6 +315,7 @@
   </section>
 
   <script src="qrcode.js"></script>
+  <script src="jsqr.js" defer></script>
   <script src="sample-playlist.js"></script>
   <script src="app.js"></script>
 </body>

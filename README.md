@@ -104,6 +104,30 @@ kortet** rakt in i sin egen tidslinje. Först satsad, först vinner.
 en kompis: när de öppnar den får de frågan att importera listan direkt i
 sin app, inklusive tidbits, omslag och ljudsnuttar.
 
+## 📷 Skanna utskrivna kort
+
+Knappen **📷 Skanna kort** på startskärmen öppnar mobilkameran. Skanna
+QR-koden på ett utskrivet kort så spelas låten **dolt i appen** – ingen
+Spotify-app öppnas och ingen titel avslöjas. Finns låten i någon av dina
+sparade listor visas år, artist, titel, omslag och tidbit när du trycker
+**Avslöja**. Kameran kräver https (den publicerade sajten funkar fint) och
+kameratillstånd. På iPhone används en inbyggd QR-avläsare (jsQR) som
+reserv.
+
+## 🎮 Spelvarianter
+
+- **🧒 Decennium-läge** – rätt årtionde räcker för att kortet ska sitta.
+  Perfekt för barn eller som uppvärmning.
+- **🎯 Exakt år-bonus** – slå på i inställningarna: den som säger exakt
+  rätt årtal får +1 🪙 (hederssystem, som artist/titel-bonusen).
+- **🧑‍🎤 Soloträning** – starta med bara en spelare: bygg så lång tidslinje
+  du kan, ett fel och omgången är över. Rekordet sparas i appen.
+- **☠️ Sudden death** – står det lika när leken tar slut blandas de
+  bortslängda korten om och de som ligger lika möts: första rätta
+  placeringen vinner allt.
+- **☀️ Ljust tema** – för utomhusspel i solen (spelkorten behåller sin
+  mörka look).
+
 ## 🖨 Skriv ut riktiga kort
 
 I redigeraren finns **🖨 Skriv ut kort** – den gör om spellistan till

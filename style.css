@@ -469,6 +469,119 @@ a { color: var(--cyan); }
 @keyframes toastIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; } }
 @keyframes toastOut { to { opacity: 0; transform: translateY(12px); } }
 
+/* ============ Odometer (rullande årtal) ============ */
+.odo { display: inline-flex; overflow: hidden; }
+.odo-col { display: inline-block; height: 1em; overflow: hidden; line-height: 1; }
+.odo-strip {
+  display: flex; flex-direction: column;
+  transition: transform 0.9s cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+.odo-strip i { display: block; height: 1em; line-height: 1; font-style: normal; }
+
+/* ============ Kortgivning ============ */
+.flip-card.deal { animation: dealIn 0.6s cubic-bezier(0.2, 0.8, 0.3, 1.15) both; }
+@keyframes dealIn {
+  0% { transform: translate(60px, -90px) rotate(14deg) scale(0.4); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+
+/* ============ Equalizer ============ */
+.eq {
+  display: flex; gap: 3px; height: 24px; align-items: flex-end;
+  opacity: 0; transition: opacity 0.3s ease;
+}
+.eq.on { opacity: 1; }
+.eq i {
+  width: 5px; border-radius: 3px; height: 30%;
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  animation: eqBar 0.9s ease-in-out infinite;
+}
+.eq.on i { animation-play-state: running; }
+.eq i:nth-child(1) { animation-duration: 0.7s; }
+.eq i:nth-child(2) { animation-duration: 1.1s; animation-delay: 0.15s; }
+.eq i:nth-child(3) { animation-duration: 0.8s; animation-delay: 0.05s; }
+.eq i:nth-child(4) { animation-duration: 1.2s; animation-delay: 0.25s; }
+.eq i:nth-child(5) { animation-duration: 0.9s; animation-delay: 0.1s; }
+@keyframes eqBar {
+  0%, 100% { height: 22%; }
+  50% { height: 100%; }
+}
+
+/* ============ QR-skanner ============ */
+.scan-view { text-align: center; }
+.center-text { text-align: center; }
+.scan-frame {
+  position: relative;
+  max-width: 340px; margin: 0 auto 10px;
+  border-radius: 16px; overflow: hidden;
+  aspect-ratio: 1;
+  background: #000;
+}
+.scan-frame video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scan-corners {
+  position: absolute; inset: 12%;
+  border-radius: 14px;
+  background:
+    linear-gradient(var(--accent), var(--accent)) top left / 26px 3px,
+    linear-gradient(var(--accent), var(--accent)) top left / 3px 26px,
+    linear-gradient(var(--accent), var(--accent)) top right / 26px 3px,
+    linear-gradient(var(--accent), var(--accent)) top right / 3px 26px,
+    linear-gradient(var(--accent), var(--accent)) bottom left / 26px 3px,
+    linear-gradient(var(--accent), var(--accent)) bottom left / 3px 26px,
+    linear-gradient(var(--accent), var(--accent)) bottom right / 26px 3px,
+    linear-gradient(var(--accent), var(--accent)) bottom right / 3px 26px;
+  background-repeat: no-repeat;
+  animation: scanPulse 1.6s ease-in-out infinite;
+}
+@keyframes scanPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.sb-chip.out { opacity: 0.4; }
+
+/* ============ Ljust tema ============ */
+:root[data-theme="light"] {
+  --bg: #f1eefb;
+  --panel: rgba(255, 255, 255, 0.72);
+  --panel-solid: #ffffff;
+  --border: rgba(27, 21, 48, 0.12);
+  --text: #1b1530;
+  --muted: #665e8a;
+  --shadow: 0 10px 26px rgba(60, 40, 120, 0.14);
+}
+:root[data-theme="light"] .bg-blobs i { opacity: 0.16; }
+:root[data-theme="light"] .btn { background: rgba(27, 21, 48, 0.07); color: var(--text); }
+:root[data-theme="light"] .btn.primary { background: linear-gradient(135deg, var(--accent), #d63d75); color: #fff; }
+:root[data-theme="light"] .btn.cta { background: linear-gradient(135deg, var(--accent) 0%, var(--violet) 100%); color: #fff; }
+:root[data-theme="light"] .play-btn { background: linear-gradient(135deg, var(--accent), var(--violet)); color: #fff; }
+:root[data-theme="light"] .btn.ghost { background: transparent; color: var(--muted); }
+:root[data-theme="light"] .field input,
+:root[data-theme="light"] .field textarea,
+:root[data-theme="light"] .search,
+:root[data-theme="light"] .playlist-name-input,
+:root[data-theme="light"] .player-input-row input {
+  background: #fff; border-color: var(--border); color: var(--text);
+}
+:root[data-theme="light"] .pl-card,
+:root[data-theme="light"] .song-list li,
+:root[data-theme="light"] .op-chip,
+:root[data-theme="light"] .sb-chip,
+:root[data-theme="light"] .standing-row,
+:root[data-theme="light"] .pill { background: rgba(27, 21, 48, 0.05); }
+:root[data-theme="light"] .song-list .song-year { color: #b26a00; }
+:root[data-theme="light"] .op-chip b { color: #b26a00; }
+:root[data-theme="light"] .embed-cover { background: #e9e5f8; }
+:root[data-theme="light"] .toast { background: #fff; color: var(--text); }
+:root[data-theme="light"] .slot { border-color: rgba(27, 21, 48, 0.25); }
+:root[data-theme="light"] .seg button.on { color: #fff; }
+:root[data-theme="light"] .switch i { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+:root[data-theme="light"] .tidbit {
+  background: rgba(178, 106, 0, 0.07);
+  border-color: rgba(178, 106, 0, 0.3);
+}
+/* Spelkorten behåller sin mörka look även i ljust tema – de är ju kort 🎴 */
+
 /* ============ Utskriftskort ============ */
 #print-pages { display: flex; flex-direction: column; gap: 18px; align-items: center; }
 
