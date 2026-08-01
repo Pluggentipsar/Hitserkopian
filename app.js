@@ -7,7 +7,7 @@ const GAME_KEY = "hitserkopian.game";
 const LEGACY_KEY = "hitserkopian.playlist";
 
 const AVATARS = ["🎸", "🎤", "🎧", "🥁", "🎹", "🎺", "🎻", "🪩"];
-const COLORS = ["#ff4d8d", "#8b5cf6", "#22d3ee", "#34d399", "#ffcf5c", "#fb7185", "#a3e635", "#f97316"];
+const COLORS = ["#d94a26", "#2f6f66", "#c8901b", "#7b4b94", "#3f699e", "#b03a5e", "#5c7f3c", "#8a5a34"];
 
 /* ---------- Hjälpare ---------- */
 const $ = (id) => document.getElementById(id);
@@ -184,7 +184,7 @@ function loadStore() {
 let store = loadStore();
 store.settings = {
   target: 5, tokens: true, sound: true,
-  theme: "dark", mode: "classic", exactBonus: false,
+  theme: "light", mode: "classic", exactBonus: false,
   ...store.settings,
 };
 store.players = Array.isArray(store.players) && store.players.length
@@ -196,7 +196,7 @@ function saveStore() {
 }
 
 function applyTheme() {
-  document.documentElement.dataset.theme = store.settings.theme === "light" ? "light" : "";
+  document.documentElement.dataset.theme = store.settings.theme === "dark" ? "dark" : "light";
 }
 
 function currentPlaylist() {
@@ -256,7 +256,7 @@ function renderHome() {
   const rec = $("home-record");
   rec.classList.toggle("hidden", !store.highscore);
   if (store.highscore) {
-    rec.textContent = `🏆 Solorekord: ${store.highscore.score} kort (${store.highscore.name})`;
+    rec.textContent = `Butiksrekord (solo): ${store.highscore.score} skivor – ${store.highscore.name}`;
   }
   applyTheme();
 }
@@ -267,7 +267,7 @@ function renderResume() {
   if (saved) {
     const p = saved.players[saved.current];
     $("resume-info").textContent =
-      `${p.name} står på tur · ${saved.deck.length} kort kvar i leken`;
+      `${p.name} står på tur · ${saved.deck.length} skivor kvar i backen`;
   }
 }
 
@@ -461,7 +461,7 @@ function renderSettings() {
   $("toggle-tokens").setAttribute("aria-checked", String(store.settings.tokens));
   $("toggle-sound").setAttribute("aria-checked", String(store.settings.sound));
   $("toggle-exact").setAttribute("aria-checked", String(store.settings.exactBonus));
-  $("toggle-theme").setAttribute("aria-checked", String(store.settings.theme === "light"));
+  $("toggle-theme").setAttribute("aria-checked", String(store.settings.theme === "dark"));
   $("rules-summary").textContent = [
     `först till ${store.settings.target}`,
     store.settings.mode === "decade" ? "🧒 decennium" : "🎯 klassiskt",
@@ -1359,7 +1359,7 @@ $("btn-scan-reveal").onclick = () => {
     <div class="card-artist">${s.url ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">Öppna länken</a>` : "Ingen länk hittades"}</div>`;
   const tb = $("scan-tidbit");
   tb.classList.toggle("hidden", !s.tidbit);
-  tb.textContent = s.tidbit ? `💡 ${s.tidbit}` : "";
+  tb.textContent = s.tidbit || "";
   $("scan-reveal").classList.remove("hidden");
   $("btn-scan-reveal").disabled = true;
   if (known && s.year > 0) odometer($("scan-reveal-card").querySelector(".card-year"), s.year);
@@ -1491,6 +1491,7 @@ function nextCard() {
   game.locked = false;
   game.bets = [];
   game.picking = null;
+  $("reveal-stamp").classList.add("hidden");
   const flip = $("flip-card");
   flip.classList.remove("flipped", "deal");
   void flip.offsetWidth; // starta om kortgivnings-animationen
@@ -1529,13 +1530,13 @@ function renderGame() {
   $("deck-count").textContent = `🃏 ${game.deck.length}`;
   $("timeline-heading").innerHTML =
     (game.sudden ? "☠️ " : "") +
-    `${p.avatar} <b>${escapeHtml(p.name)}</b>s tidslinje · ` +
-    (game.solo ? `${p.timeline.length} kort` : `${p.timeline.length}/${game.target}`);
+    `${p.avatar} <b>${escapeHtml(p.name)}</b>s skivback · ` +
+    (game.solo ? `${p.timeline.length} skivor` : `${p.timeline.length}/${game.target}`);
   $("timeline-hint").innerHTML =
     game.sudden ? "☠️ <b>Sudden death:</b> första rätta placeringen vinner allt!" :
     game.mode === "decade"
-      ? "Tryck på en lucka <b>+</b> – i decennieläget räcker rätt årtionde! 🧒"
-      : "Tryck på en lucka <b>+</b> där du tror låten hör hemma!";
+      ? "Tryck på ett fack <b>+</b> – i decennieläget räcker rätt årtionde! 🧒"
+      : "Tryck på ett fack <b>+</b> där du tror att skivan hör hemma!";
   $("reveal-panel").classList.toggle("hidden", !game.revealed);
   $("timeline-hint").classList.toggle("hidden", game.revealed || game.locked);
   $("flip-card").classList.toggle("flipped", game.revealed);
@@ -1548,7 +1549,7 @@ function renderGame() {
   btnReveal.classList.toggle("hidden", game.revealed);
   btnReveal.disabled = game.selectedSlot === null || game.picking !== null;
   btnReveal.textContent =
-    !game.locked && stealPossible() ? "🔒 Lås gissning" : "🎬 Avslöja!";
+    !game.locked && stealPossible() ? "Lås gissningen" : "Vänd på skivan!";
 
   // Byt låt-knapp (pollett)
   $("btn-skip-song").classList.toggle(
@@ -1624,7 +1625,7 @@ function renderGame() {
       .map((bet) => `<i style="background:${game.players[bet.p].color}" title="${escapeHtml(game.players[bet.p].name)}"></i>`)
       .join("");
     b.innerHTML = `+${dots ? `<span class="slot-dots">${dots}</span>` : ""}`;
-    b.title = "Placera här";
+    b.title = "Ställ skivan här";
     b.disabled = game.revealed || (game.locked && game.picking === null);
     b.onclick = () => {
       if (game.picking !== null) {
@@ -1719,21 +1720,33 @@ function doReveal() {
   odometer($("flip-year"), card.year);
 
   const res = $("reveal-result");
+  const stamp = $("reveal-stamp");
+  stamp.classList.remove("hidden");
   if (correct && game.sudden) {
-    res.textContent = "🏆 Rätt – och därmed vinst!";
+    res.textContent = "Rätt fack – och därmed hela vinsten!";
     res.className = "reveal-result ok";
+    stamp.textContent = "SÅLD!";
+    stamp.className = "stamp ok";
   } else if (correct) {
-    res.textContent = "✅ Rätt placerat!";
+    res.textContent = "Rätt i backen!";
     res.className = "reveal-result ok";
+    stamp.textContent = "SÅLD!";
+    stamp.className = "stamp ok";
   } else if (stealer) {
-    res.textContent = `😈 ${stealer.name} snor kortet!`;
+    res.textContent = `${stealer.name} satsade rätt och snor skivan!`;
     res.className = "reveal-result ok";
+    stamp.textContent = "SNODD!";
+    stamp.className = "stamp ok";
   } else if (game.solo) {
-    res.textContent = "💥 Fel – omgången är över!";
+    res.textContent = "Fel fack – rundan är över!";
     res.className = "reveal-result fail";
+    stamp.textContent = "FEL FACK";
+    stamp.className = "stamp fail";
   } else {
-    res.textContent = "❌ Fel plats!";
+    res.textContent = "Fel fack – skivan åker tillbaka.";
     res.className = "reveal-result fail";
+    stamp.textContent = "FEL FACK";
+    stamp.className = "stamp fail";
   }
 
   $("reveal-card").innerHTML = `
@@ -1744,7 +1757,7 @@ function doReveal() {
 
   const tb = $("reveal-tidbit");
   tb.classList.toggle("hidden", !card.tidbit);
-  tb.textContent = card.tidbit ? `💡 ${card.tidbit}` : "";
+  tb.textContent = card.tidbit || "";
 
   $("btn-bonus").classList.toggle("hidden", !game.useTokens);
   $("btn-bonus").disabled = false;
@@ -1846,18 +1859,18 @@ function endGame(winner) {
       saveStore();
     }
     $("winner-text").textContent = record
-      ? `🏆 NYTT REKORD: ${score} kort!`
-      : `${score} kort denna gång!`;
+      ? `NYTT BUTIKSREKORD: ${score} skivor!`
+      : `${score} skivor denna runda!`;
     $("standings").innerHTML = `
       <div class="standing-row">
         <span class="medal">🎯</span>
         <span class="name">Din runda</span>
-        <span class="score">${score} kort</span>
+        <span class="score">${score} skivor</span>
       </div>
       <div class="standing-row">
         <span class="medal">🏆</span>
         <span class="name">Rekord${store.highscore?.name ? ` (${escapeHtml(store.highscore.name)})` : ""}</span>
-        <span class="score">${store.highscore?.score ?? score} kort</span>
+        <span class="score">${store.highscore?.score ?? score} skivor</span>
       </div>`;
   } else {
     if (winner) {
@@ -1865,17 +1878,17 @@ function endGame(winner) {
         ? `☠️ ${winner.name} vinner sudden death! 🎉`
         : `${winner.name} vinner! 🎉`;
     } else if (tops.length === 1) {
-      $("winner-text").textContent = `Leken är slut – ${tops[0].name} vinner med ${max} kort!`;
+      $("winner-text").textContent = `Backen är tom – ${tops[0].name} vinner med ${max} skivor!`;
     } else {
       $("winner-text").textContent =
-        `Leken är slut – oavgjort mellan ${tops.map((p) => p.name).join(" & ")}!`;
+        `Backen är tom – oavgjort mellan ${tops.map((p) => p.name).join(" & ")}!`;
     }
     $("standings").innerHTML = sorted.map((p, i) => `
       <div class="standing-row">
         <span class="medal">${medals[i] || "•"}</span>
         <span class="avatar" style="background:${p.color}33">${p.avatar}</span>
         <span class="name">${escapeHtml(p.name)}</span>
-        <span class="score">${p.timeline.length} kort</span>
+        <span class="score">${p.timeline.length} skivor</span>
       </div>`).join("");
   }
 
