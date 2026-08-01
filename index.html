@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hitserkopian 🎵</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://www.youtube.com/iframe_api" async></script>
+  <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
+</head>
+<body>
+
+  <!-- ============ STARTSKÄRM ============ -->
+  <section id="screen-start" class="screen active">
+    <header class="hero">
+      <h1>🎵 Hitserkopian</h1>
+      <p class="tagline">Gissa var låten hör hemma på tidslinjen!</p>
+    </header>
+
+    <div class="panel">
+      <h2>Spellista</h2>
+      <p id="start-playlist-info" class="muted"></p>
+      <button id="btn-open-editor" class="btn secondary">✏️ Redigera spellista</button>
+    </div>
+
+    <div class="panel">
+      <h2>Spelare</h2>
+      <div id="player-inputs"></div>
+      <button id="btn-add-player" class="btn small secondary">+ Lägg till spelare</button>
+    </div>
+
+    <div class="panel">
+      <h2>Inställningar</h2>
+      <label class="field-inline">
+        Kort för att vinna:
+        <input type="number" id="input-target" min="2" max="20" value="5">
+      </label>
+    </div>
+
+    <button id="btn-start-game" class="btn big primary">▶ Starta spelet</button>
+  </section>
+
+  <!-- ============ SPELLISTE-REDIGERARE ============ -->
+  <section id="screen-editor" class="screen">
+    <header class="bar">
+      <button id="btn-editor-back" class="btn small secondary">← Tillbaka</button>
+      <h2>✏️ Spellista</h2>
+    </header>
+
+    <div class="panel">
+      <label class="field">
+        Spellistans namn
+        <input type="text" id="input-playlist-name" placeholder="Min spellista">
+      </label>
+    </div>
+
+    <div class="panel">
+      <h3 id="editor-song-form-title">Lägg till låt</h3>
+      <div class="song-form">
+        <label class="field">Artist <input type="text" id="input-song-artist" placeholder="ABBA"></label>
+        <label class="field">Titel <input type="text" id="input-song-title" placeholder="Dancing Queen"></label>
+        <label class="field">År <input type="number" id="input-song-year" min="1900" max="2100" placeholder="1976"></label>
+        <label class="field">Spotify- eller YouTube-länk (valfri)
+          <input type="url" id="input-song-url" placeholder="https://open.spotify.com/track/… eller https://youtu.be/…">
+        </label>
+        <label class="field">Tidbit om artisten (valfri)
+          <textarea id="input-song-tidbit" rows="2" placeholder="Kul fakta som visas när kortet avslöjas…"></textarea>
+        </label>
+        <div class="row">
+          <button id="btn-save-song" class="btn primary">💾 Spara låt</button>
+          <button id="btn-cancel-edit" class="btn secondary hidden">Avbryt</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Låtar (<span id="editor-song-count">0</span>)</h3>
+      <ul id="editor-song-list" class="song-list"></ul>
+    </div>
+
+    <div class="panel">
+      <h3>Verktyg</h3>
+      <div class="row wrap">
+        <button id="btn-export" class="btn secondary">⬇️ Exportera JSON</button>
+        <label class="btn secondary file-btn">⬆️ Importera JSON
+          <input type="file" id="input-import" accept=".json,application/json" hidden>
+        </label>
+        <button id="btn-copy-tidbit-prompt" class="btn secondary">🤖 Kopiera Claude-prompt för tidbits</button>
+        <button id="btn-load-sample" class="btn secondary">🎁 Ladda exempellistan</button>
+      </div>
+      <p class="muted small-text">Tidbit-knappen kopierar en färdig fråga med alla dina låtar –
+        klistra in den i en chatt med Claude så får du tillbaka JSON med roliga fakta om varje artist.</p>
+    </div>
+  </section>
+
+  <!-- ============ SPELSKÄRM ============ -->
+  <section id="screen-game" class="screen">
+    <header class="bar">
+      <button id="btn-quit" class="btn small secondary">✕ Avsluta</button>
+      <h2 id="game-status"></h2>
+      <span id="deck-count" class="pill"></span>
+    </header>
+
+    <!-- Mysteriekortet + musikspelare -->
+    <div class="panel mystery-panel">
+      <div id="mystery-card" class="card mystery">
+        <div class="card-year">?</div>
+        <div class="card-info">Mysterielåt</div>
+      </div>
+
+      <div id="music-controls" class="music-controls">
+        <button id="btn-play" class="btn primary big">▶ Spela låten</button>
+        <button id="btn-pause" class="btn secondary hidden">⏸ Pausa</button>
+        <a id="btn-yt-search" class="btn secondary hidden" target="_blank" rel="noopener">🔎 Öppna YouTube-sökning</a>
+        <button id="btn-toggle-embed" class="btn small secondary hidden">👀 Visa spelaren (spoiler!)</button>
+      </div>
+
+      <div id="embed-wrap" class="embed-wrap">
+        <div id="embed-holder"></div>
+        <div id="embed-cover" class="embed-cover">🙈 Spelaren är dold – inga spoilers!</div>
+      </div>
+    </div>
+
+    <!-- Avslöjat kort -->
+    <div id="reveal-panel" class="panel reveal-panel hidden">
+      <div id="reveal-result" class="reveal-result"></div>
+      <div id="reveal-card" class="card revealed"></div>
+      <p id="reveal-tidbit" class="tidbit"></p>
+      <button id="btn-next" class="btn primary big">➡ Nästa spelare</button>
+    </div>
+
+    <!-- Aktiva spelarens tidslinje -->
+    <div class="panel">
+      <h3 id="timeline-heading"></h3>
+      <p class="muted small-text" id="timeline-hint">Klicka på en lucka där du tror att låten hör hemma, avslöja sedan!</p>
+      <div id="timeline" class="timeline"></div>
+      <button id="btn-reveal" class="btn primary big" disabled>🎬 Avslöja!</button>
+    </div>
+
+    <!-- Övriga spelare -->
+    <div id="other-players" class="panel"></div>
+  </section>
+
+  <!-- ============ VINNARSKÄRM ============ -->
+  <section id="screen-winner" class="screen">
+    <div class="panel center">
+      <h1>🏆</h1>
+      <h2 id="winner-text"></h2>
+      <button id="btn-play-again" class="btn primary big">🔁 Spela igen</button>
+    </div>
+  </section>
+
+  <script src="sample-playlist.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
