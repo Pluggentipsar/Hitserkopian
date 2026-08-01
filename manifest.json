@@ -1,0 +1,12 @@
+{
+  "name": "Hitserkopian",
+  "short_name": "Hitserkopian",
+  "description": "Musikquiz: hör låten, gissa året, bygg din tidslinje!",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0d0a1a",
+  "theme_color": "#0d0a1a",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
