@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0d0a1a">
+  <meta name="theme-color" content="#efe6d0">
   <title>Hitserkopian 🎵</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..900&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="https://www.youtube.com/iframe_api" async></script>
   <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
@@ -23,8 +23,8 @@
   <section id="screen-home" class="screen active">
     <header class="hero">
       <div class="logo-disc" aria-hidden="true"></div>
-      <h1>Hitserkopian</h1>
-      <p class="tagline">Hör låten. Gissa året. Sno dina vänners kort.</p>
+      <h1><span class="marker">Hitserkopian</span></h1>
+      <p class="tagline">Hör låten. Gissa året. Sno dina vänners skivor.</p>
     </header>
 
     <div id="resume-banner" class="panel resume hidden">
@@ -46,7 +46,7 @@
       </button>
       <button id="btn-home-library" class="home-item">
         <span class="hi-emoji">💿</span>
-        <span class="hi-text"><b>Mina spellistor</b><small id="home-library-count">Hämta, bygg och dela musik</small></span>
+        <span class="hi-text"><b>Skivbacken</b><small id="home-library-count">Dina listor – gräv, fyll på och dela</small></span>
         <span class="hi-arrow">→</span>
       </button>
       <button id="btn-home-scan" class="home-item">
@@ -114,7 +114,7 @@
         <button id="toggle-sound" class="switch" role="switch" aria-checked="true"><i></i></button>
       </div>
       <div class="setting-row">
-        <span>☀️ Ljust tema</span>
+        <span>🌙 Efter stängning <small class="muted">(mörkt läge)</small></span>
         <button id="toggle-theme" class="switch" role="switch" aria-checked="false"><i></i></button>
       </div>
     </details>
@@ -126,13 +126,13 @@
   <section id="screen-library" class="screen">
     <header class="bar">
       <button id="btn-library-back" class="btn ghost small">←</button>
-      <h2>💿 Mina spellistor</h2>
+      <h2>💿 Skivbacken</h2>
     </header>
 
     <div id="library-grid" class="library-grid"></div>
 
     <div class="panel">
-      <h3>Hämta ny musik</h3>
+      <h3>Fyll på backen</h3>
       <div class="import-paths">
         <button class="import-path" id="path-spotify">
           <span class="ip-emoji">🎧</span>
@@ -220,7 +220,7 @@
       </div>
       <ul id="editor-song-list" class="song-list"></ul>
       <p id="editor-empty" class="muted small-text center-text hidden">
-        Här var det tomt 🦗 – lägg till en låt nedan, eller gå tillbaka och hämta musik från Spotify.</p>
+        Tomt i det här facket 🦗 – lägg till en låt nedan, eller gå tillbaka till backen och fyll på från Spotify.</p>
     </div>
 
     <details id="editor-add-details" class="panel">
@@ -257,6 +257,7 @@
 
     <div class="panel mystery-panel">
       <div class="vinyl-stage">
+        <div class="tonearm" aria-hidden="true"></div>
         <div id="vinyl" class="vinyl">
           <div class="vinyl-label">?</div>
         </div>
@@ -270,7 +271,7 @@
 
       <div id="music-controls" class="music-controls">
         <div id="eq-game" class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-        <button id="btn-play" class="btn play-btn" title="Spela låten">▶</button>
+        <button id="btn-play" class="btn play-btn" title="Släpp nålen">▶</button>
         <button id="btn-pause" class="btn play-btn hidden" title="Pausa">⏸</button>
         <a id="btn-yt-search" class="btn secondary hidden" target="_blank" rel="noopener">🔎 Öppna YouTube-sökning</a>
         <button id="btn-skip-song" class="btn secondary small hidden" title="Kostar 1 pollett">🎲 Byt låt (−1 🪙)</button>
@@ -284,6 +285,7 @@
     </div>
 
     <div id="reveal-panel" class="panel reveal-panel hidden">
+      <span id="reveal-stamp" class="stamp hidden"></span>
       <div id="reveal-result" class="reveal-result"></div>
       <div id="reveal-card" class="card revealed"></div>
       <p id="reveal-tidbit" class="tidbit"></p>
@@ -312,7 +314,7 @@
       <div class="handoff-card">
         <div id="handoff-avatar" class="handoff-avatar"></div>
         <h2 id="handoff-title"></h2>
-        <p class="muted">Skicka mobilen – och inga tjuvkikar på vägen! 👀</p>
+        <p class="muted">Skicka luren vidare – och inga tjuvkikar i backen! 👀</p>
         <button id="btn-handoff-go" class="btn cta">🎧 Jag har den – kör!</button>
       </div>
     </div>
@@ -336,11 +338,12 @@
 
     <div id="scan-result" class="panel mystery-panel hidden">
       <div class="vinyl-stage">
+        <div class="tonearm" aria-hidden="true"></div>
         <div id="scan-vinyl" class="vinyl"><div class="vinyl-label">?</div></div>
       </div>
       <div class="music-controls">
         <div id="eq-scan" class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-        <button id="btn-scan-play" class="btn play-btn" title="Spela låten">▶</button>
+        <button id="btn-scan-play" class="btn play-btn" title="Släpp nålen">▶</button>
         <button id="btn-scan-pause" class="btn play-btn hidden" title="Pausa">⏸</button>
         <a id="btn-scan-yt" class="btn secondary hidden" target="_blank" rel="noopener">🔎 Öppna YouTube-sökning</a>
         <button id="btn-scan-toggle" class="btn ghost small hidden">👀 Visa spelaren</button>
