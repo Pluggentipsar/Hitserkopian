@@ -47,10 +47,11 @@ Två sätt, båda utan Spotify-inloggning:
 
 1. **Exportify (rekommenderas)** – gå till [exportify.net](https://exportify.net),
    logga in och exportera din spellista som CSV. Importera sedan filen via
-   **📄 Importera CSV (Exportify)** i redigeraren – artist, titel, årtal
-   (albumets releasedatum) och låtlänk följer med automatiskt.
-   Kontrollera gärna årtalen: för samlingsalbum kan releaseåret skilja sig
-   från låtens originalår.
+   **📄 Importera CSV** i redigeraren – artist, titel, årtal (albumets
+   releasedatum) och låtlänk följer med automatiskt. Importen hamnar som en
+   **egen ny lista** (döpt efter filen) och du får direkt frågan om du vill
+   starta en ny omgång med den. Kontrollera gärna årtalen: för samlingsalbum
+   kan releaseåret skilja sig från låtens originalår.
 2. **Klistra in länkar** – markera alla låtar i Spotify-appen (Ctrl/Cmd+A),
    kopiera (Ctrl/Cmd+C) och klistra in i rutan i redigeraren. Låttitlarna
    hämtas automatiskt, men artist och årtal saknas – fyll i själv eller låt

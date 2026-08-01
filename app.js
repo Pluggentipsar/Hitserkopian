@@ -313,11 +313,11 @@ $("btn-new-playlist").onclick = () => {
 
 $("btn-open-editor").onclick = openEditor;
 
-$("btn-start-game").onclick = () => {
+function tryStartGame() {
   const names = [...$("player-inputs").querySelectorAll("input")]
     .map((i) => i.value.trim())
     .filter(Boolean);
-  if (names.length === 0) { toast("Lägg till minst en spelare!", "err"); return; }
+  if (names.length === 0) { toast("Lägg till minst en spelare!", "err"); return false; }
 
   const pl = currentPlaylist();
   const valid = pl.songs.filter((s) => s.year > 0);
@@ -328,12 +328,26 @@ $("btn-start-game").onclick = () => {
       `”${pl.name}” behöver minst ${minSongs} spelbara låtar för ${names.length} spelare.` +
       (skipped ? ` (${skipped} saknar årtal.)` : ""), "err"
     );
-    return;
+    return false;
   }
   if (skipped > 0) toast(`${skipped} låtar utan årtal hoppas över.`, "warn");
   localStorage.removeItem(GAME_KEY);
   startGame(names, store.settings.target, valid);
-};
+  return true;
+}
+
+$("btn-start-game").onclick = tryStartGame;
+
+/* Efter en lyckad import: erbjud att dra igång en ny omgång direkt */
+function offerQuickStart(pl) {
+  const playable = pl.songs.filter((s) => s.year > 0).length;
+  if (playable < 4) return; // för få spelbara låtar – stanna i redigeraren
+  if (!confirm(`🎉 ”${pl.name}” är redo (${playable} spelbara låtar).\nStarta en ny omgång direkt?`)) return;
+  store.activeId = pl.id;
+  saveStore();
+  renderStart();
+  if (!tryStartGame()) showScreen("screen-start");
+}
 
 $("btn-resume").onclick = () => {
   const saved = loadSavedGame();
@@ -503,17 +517,20 @@ $("input-import").onchange = async (e) => {
     if (songs.length === 0) throw new Error("inga giltiga låtar");
     const name = String(p.name ?? file.name.replace(/\.json$/i, ""));
     const existing = store.playlists.find((x) => x.name === name);
+    let pl;
     if (existing && confirm(`”${name}” finns redan – ersätta den? (Avbryt = skapa ny lista)`)) {
       existing.songs = songs;
       store.activeId = existing.id;
+      pl = existing;
     } else {
-      const pl = { id: uid(), name: existing ? `${name} (2)` : name, songs };
+      pl = { id: uid(), name: existing ? `${name} (2)` : name, songs };
       store.playlists.push(pl);
       store.activeId = pl.id;
     }
     saveStore();
     renderEditor();
     toast(`Importerade ${songs.length} låtar! 🎉`, "ok");
+    offerQuickStart(pl);
   } catch (err) {
     toast(`Kunde inte läsa filen: ${err.message}`, "err");
   }
@@ -579,7 +596,16 @@ $("input-import-csv").onchange = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
   try {
-    const pl = currentPlaylist();
+    // Importera till en egen ny lista (eller den aktiva om den är tom),
+    // så gamla listan inte blandas ihop med den nya.
+    let pl = currentPlaylist();
+    if (pl.songs.length > 0) {
+      pl = { id: uid(), name: file.name.replace(/\.csv$/i, "") || "Importerad lista", songs: [] };
+      store.playlists.push(pl);
+      store.activeId = pl.id;
+    } else if (!pl.name || pl.name === "Ny spellista") {
+      pl.name = file.name.replace(/\.csv$/i, "") || pl.name;
+    }
     const rows = parseCsv(await file.text());
     if (rows.length < 2) throw new Error("filen verkar vara tom");
     const header = rows[0].map((h) => h.trim().toLowerCase().replace(/^﻿/, ""));
@@ -609,10 +635,11 @@ $("input-import-csv").onchange = async (e) => {
     saveStore();
     renderEditor();
     toast(
-      `Importerade ${added} låtar! 🎉` +
+      `Importerade ${added} låtar till ”${pl.name}”! 🎉` +
       (dupes ? ` ${dupes} dubbletter hoppades över.` : "") +
       (missingYear ? ` ⚠️ ${missingYear} saknar årtal.` : ""), "ok"
     );
+    offerQuickStart(pl);
   } catch (err) {
     toast(`Kunde inte läsa CSV-filen: ${err.message}`, "err");
   }
