@@ -83,6 +83,27 @@ chatt med Claude, spara svaret som en `.json`-fil och importera den i
 redigeraren. Claude skriver tidbits **och** fyller i saknade artistnamn och
 årtal (praktiskt efter länk-import). Klart!
 
+## Publicera på webben
+
+### GitHub Pages (redan uppsatt ✅)
+
+Repot innehåller ett GitHub Actions-flöde (`.github/workflows/deploy-pages.yml`)
+som automatiskt publicerar spelet till GitHub Pages vid varje push. Sajten
+hamnar på:
+
+**https://pluggentipsar.github.io/Hitserkopian/**
+
+### Cloudflare Pages (alternativ)
+
+Vill du hellre ligga på Cloudflare? Inget byggsteg behövs:
+
+1. Logga in på [dash.cloudflare.com](https://dash.cloudflare.com) →
+   **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
+2. Välj repot `Pluggentipsar/Hitserkopian` och branchen du vill publicera.
+3. Lämna *Build command* tomt och sätt *Build output directory* till `/`.
+4. Klart – du får en adress i stil med `hitserkopian.pages.dev`, och varje
+   push publiceras automatiskt.
+
 ## Bra att veta om musiken
 
 - **Spotify**: utan inloggning/Premium i webbläsaren spelas ofta bara en
