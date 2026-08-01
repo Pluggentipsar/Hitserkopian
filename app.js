@@ -182,9 +182,18 @@ function loadStore() {
 }
 
 let store = loadStore();
+store.settings = {
+  target: 5, tokens: true, sound: true,
+  theme: "dark", mode: "classic", exactBonus: false,
+  ...store.settings,
+};
 
 function saveStore() {
   localStorage.setItem(STORE_KEY, JSON.stringify(store));
+}
+
+function applyTheme() {
+  document.documentElement.dataset.theme = store.settings.theme === "light" ? "light" : "";
 }
 
 function currentPlaylist() {
@@ -264,8 +273,14 @@ function renderSettings() {
   $("target-seg").querySelectorAll("button").forEach((b) => {
     b.classList.toggle("on", Number(b.dataset.v) === store.settings.target);
   });
+  $("mode-seg").querySelectorAll("button").forEach((b) => {
+    b.classList.toggle("on", b.dataset.m === store.settings.mode);
+  });
   $("toggle-tokens").setAttribute("aria-checked", String(store.settings.tokens));
   $("toggle-sound").setAttribute("aria-checked", String(store.settings.sound));
+  $("toggle-exact").setAttribute("aria-checked", String(store.settings.exactBonus));
+  $("toggle-theme").setAttribute("aria-checked", String(store.settings.theme === "light"));
+  applyTheme();
 }
 
 $("target-seg").querySelectorAll("button").forEach((b) => {
@@ -276,7 +291,15 @@ $("target-seg").querySelectorAll("button").forEach((b) => {
   };
 });
 
-for (const [id, key] of [["toggle-tokens", "tokens"], ["toggle-sound", "sound"]]) {
+$("mode-seg").querySelectorAll("button").forEach((b) => {
+  b.onclick = () => {
+    store.settings.mode = b.dataset.m;
+    saveStore();
+    renderSettings();
+  };
+});
+
+for (const [id, key] of [["toggle-tokens", "tokens"], ["toggle-sound", "sound"], ["toggle-exact", "exactBonus"]]) {
   $(id).onclick = () => {
     store.settings[key] = !store.settings[key];
     saveStore();
@@ -284,6 +307,12 @@ for (const [id, key] of [["toggle-tokens", "tokens"], ["toggle-sound", "sound"]]
     if (key === "sound" && store.settings.sound) sfx.token();
   };
 }
+
+$("toggle-theme").onclick = () => {
+  store.settings.theme = store.settings.theme === "light" ? "dark" : "light";
+  saveStore();
+  renderSettings();
+};
 
 function addPlayerInput(value = "") {
   const wrap = $("player-inputs");
@@ -928,30 +957,41 @@ let spotifyController = null;
 let previewAudio = null;
 let currentTrack = { type: "none" };
 
+/* Två uppsättningar spelarkontroller: spelets och skannerns */
+const PLAYER_UIS = {
+  game: { wrap: "embed-wrap", holder: "embed-holder", play: "btn-play", pause: "btn-pause",
+          search: "btn-yt-search", toggle: "btn-toggle-embed", vinyl: "vinyl", eq: "eq-game" },
+  scan: { wrap: "scan-embed-wrap", holder: "scan-embed-holder", play: "btn-scan-play", pause: "btn-scan-pause",
+          search: "btn-scan-yt", toggle: "btn-scan-toggle", vinyl: "scan-vinyl", eq: "eq-scan" },
+};
+let playerUI = PLAYER_UIS.game;
+
 window.onSpotifyIframeApiReady = (api) => { spotifyApi = api; };
 
 function destroyPlayers() {
   if (ytPlayer) { try { ytPlayer.destroy(); } catch (_) {} ytPlayer = null; }
   if (spotifyController) { try { spotifyController.destroy(); } catch (_) {} spotifyController = null; }
   if (previewAudio) { try { previewAudio.pause(); } catch (_) {} previewAudio = null; }
-  $("embed-holder").innerHTML = "";
+  $(PLAYER_UIS.game.holder).innerHTML = "";
+  $(PLAYER_UIS.scan.holder).innerHTML = "";
 }
 
 function setSpinning(on) {
-  $("vinyl").classList.toggle("spinning", on);
+  $(playerUI.vinyl).classList.toggle("spinning", on);
+  $(playerUI.eq).classList.toggle("on", on);
 }
 
 function loadTrack(song) {
   destroyPlayers();
   setSpinning(false);
 
-  const wrap = $("embed-wrap");
+  const wrap = $(playerUI.wrap);
   wrap.classList.remove("show-embed");
-  $("btn-play").classList.remove("hidden");
-  $("btn-pause").classList.add("hidden");
-  $("btn-yt-search").classList.add("hidden");
-  $("btn-toggle-embed").classList.add("hidden");
-  $("btn-toggle-embed").textContent = "👀 Visa spelaren";
+  $(playerUI.play).classList.remove("hidden");
+  $(playerUI.pause).classList.add("hidden");
+  $(playerUI.search).classList.add("hidden");
+  $(playerUI.toggle).classList.add("hidden");
+  $(playerUI.toggle).textContent = "👀 Visa spelaren";
 
   // 30-sekunderssnutt från iTunes: pålitligast och helt osynlig – vinner
   if (song.preview) {
@@ -964,19 +1004,19 @@ function loadTrack(song) {
 
   if (currentTrack.type === "none") {
     wrap.classList.add("empty");
-    $("btn-play").classList.add("hidden");
+    $(playerUI.play).classList.add("hidden");
     const q = encodeURIComponent(`${song.artist} ${song.title}`);
-    const a = $("btn-yt-search");
+    const a = $(playerUI.search);
     a.href = `https://www.youtube.com/results?search_query=${q}`;
     a.classList.remove("hidden");
     return;
   }
 
   wrap.classList.remove("empty");
-  $("btn-toggle-embed").classList.remove("hidden");
+  $(playerUI.toggle).classList.remove("hidden");
 
   const holder = document.createElement("div");
-  $("embed-holder").appendChild(holder);
+  $(playerUI.holder).appendChild(holder);
 
   if (currentTrack.type === "youtube") {
     const create = () => {
@@ -1009,11 +1049,11 @@ function loadTrack(song) {
 
 function resetPlayButtons() {
   setSpinning(false);
-  $("btn-pause").classList.add("hidden");
-  $("btn-play").classList.remove("hidden");
+  $(playerUI.pause).classList.add("hidden");
+  $(playerUI.play).classList.remove("hidden");
 }
 
-$("btn-play").onclick = () => {
+function playMusic() {
   if (currentTrack.type === "preview") {
     if (!previewAudio) {
       previewAudio = new Audio(currentTrack.url);
@@ -1026,24 +1066,30 @@ $("btn-play").onclick = () => {
   else if (currentTrack.type === "spotify" && spotifyController) spotifyController.play();
   else return;
   setSpinning(true);
-  $("btn-play").classList.add("hidden");
-  $("btn-pause").classList.remove("hidden");
-};
+  $(playerUI.play).classList.add("hidden");
+  $(playerUI.pause).classList.remove("hidden");
+}
 
-$("btn-pause").onclick = () => {
+function pauseMusic() {
   if (currentTrack.type === "preview" && previewAudio) previewAudio.pause();
   else if (currentTrack.type === "youtube" && ytPlayer?.pauseVideo) ytPlayer.pauseVideo();
   else if (currentTrack.type === "spotify" && spotifyController) spotifyController.pause();
   resetPlayButtons();
-};
+}
 
-$("btn-toggle-embed").onclick = () => {
-  const wrap = $("embed-wrap");
+function toggleEmbed() {
+  const wrap = $(playerUI.wrap);
   wrap.classList.toggle("show-embed");
-  $("btn-toggle-embed").textContent = wrap.classList.contains("show-embed")
+  $(playerUI.toggle).textContent = wrap.classList.contains("show-embed")
     ? "🙈 Dölj spelaren"
     : "👀 Visa spelaren";
-};
+}
+
+for (const ui of Object.values(PLAYER_UIS)) {
+  $(ui.play).onclick = playMusic;
+  $(ui.pause).onclick = pauseMusic;
+  $(ui.toggle).onclick = toggleEmbed;
+}
 
 function stopMusic() {
   if (previewAudio) { try { previewAudio.pause(); } catch (_) {} }
@@ -1053,8 +1099,175 @@ function stopMusic() {
 }
 
 /* ==========================================================================
+ * QR-SKANNER – skanna utskrivna kort, spela dolt i appen
+ * ========================================================================== */
+let scanStream = null;
+let scanTimer = null;
+let scanCurrent = null;
+
+function findSongByQr(text) {
+  const target = parseMusicUrl(text);
+  let searchQuery = "";
+  try {
+    const u = new URL(text);
+    if (u.hostname.replace(/^www\./, "").endsWith("youtube.com") && u.pathname === "/results") {
+      searchQuery = (u.searchParams.get("search_query") || "").toLowerCase().trim();
+    }
+  } catch (_) { /* ingen URL */ }
+
+  for (const pl of store.playlists) {
+    for (const s of pl.songs) {
+      if (s.url && s.url === text) return s;
+      if (target.type !== "none") {
+        const own = parseMusicUrl(s.url);
+        if (own.type === target.type && own.id === target.id) return s;
+      }
+      if (searchQuery && `${s.artist} ${s.title}`.toLowerCase().trim() === searchQuery) return s;
+    }
+  }
+  return null;
+}
+
+async function startScanner() {
+  playerUI = PLAYER_UIS.scan;
+  showScreen("screen-scan");
+  $("scan-result").classList.add("hidden");
+  $("scan-view").classList.remove("hidden");
+  $("scan-error").classList.add("hidden");
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" },
+      audio: false,
+    });
+  } catch (_) {
+    const err = $("scan-error");
+    err.textContent = "🚫 Kunde inte öppna kameran. Ge sidan kameratillstånd och testa igen (kräver https).";
+    err.classList.remove("hidden");
+    return;
+  }
+  const video = $("scan-video");
+  video.srcObject = scanStream;
+  try { await video.play(); } catch (_) { /* iOS kräver playsinline – satt i HTML */ }
+
+  const detector = "BarcodeDetector" in window
+    ? new BarcodeDetector({ formats: ["qr_code"] })
+    : null;
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+  scanTimer = setInterval(async () => {
+    if (!video.videoWidth) return;
+    let text = null;
+    try {
+      if (detector) {
+        const codes = await detector.detect(video);
+        if (codes.length) text = codes[0].rawValue;
+      } else if (window.jsQR) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const hit = jsQR(img.data, img.width, img.height);
+        if (hit) text = hit.data;
+      }
+    } catch (_) { /* försök igen nästa varv */ }
+    if (text) {
+      stopScanCamera();
+      handleScan(text);
+    }
+  }, 350);
+}
+
+function stopScanCamera() {
+  if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
+  if (scanStream) {
+    scanStream.getTracks().forEach((t) => t.stop());
+    scanStream = null;
+  }
+}
+
+function handleScan(text) {
+  const song = findSongByQr(text);
+  scanCurrent = song || normalizeSong({
+    title: "", artist: "",
+    url: /^https?:\/\//i.test(text) ? text : "",
+  });
+
+  $("scan-view").classList.add("hidden");
+  $("scan-result").classList.remove("hidden");
+  $("scan-reveal").classList.add("hidden");
+  $("btn-scan-reveal").disabled = false;
+  playerUI = PLAYER_UIS.scan;
+  loadTrack(scanCurrent);
+  sfx.token();
+  if (!song) {
+    toast(
+      scanCurrent.url
+        ? "Kortet finns inte i dina sparade listor – spelar ändå dolt."
+        : "QR-koden innehöll ingen spelbar länk.",
+      "warn"
+    );
+  }
+}
+
+$("btn-scan-reveal").onclick = () => {
+  if (!scanCurrent) return;
+  stopMusic();
+  $(PLAYER_UIS.scan.wrap).classList.add("show-embed");
+  const s = scanCurrent;
+  const known = s.title || s.artist;
+  $("scan-reveal-card").innerHTML = known ? `
+    ${s.art ? `<img class="reveal-art" src="${escapeHtml(s.art)}" alt="">` : ""}
+    <div class="card-year">${s.year > 0 ? escapeHtml(s.year) : "?"}</div>
+    <div class="card-title">${escapeHtml(s.title)}</div>
+    <div class="card-artist">${escapeHtml(s.artist)}</div>` : `
+    <div class="card-title">Okänt kort 🤷</div>
+    <div class="card-artist">${s.url ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">Öppna länken</a>` : "Ingen länk hittades"}</div>`;
+  const tb = $("scan-tidbit");
+  tb.classList.toggle("hidden", !s.tidbit);
+  tb.textContent = s.tidbit ? `💡 ${s.tidbit}` : "";
+  $("scan-reveal").classList.remove("hidden");
+  $("btn-scan-reveal").disabled = true;
+  if (known && s.year > 0) odometer($("scan-reveal-card").querySelector(".card-year"), s.year);
+};
+
+$("btn-scan-next").onclick = () => {
+  stopMusic();
+  destroyPlayers();
+  startScanner();
+};
+
+$("btn-scan-back").onclick = () => {
+  stopScanCamera();
+  stopMusic();
+  destroyPlayers();
+  playerUI = PLAYER_UIS.game;
+  renderStart();
+  showScreen("screen-start");
+};
+
+$("btn-open-scanner").onclick = startScanner;
+
+/* ==========================================================================
  * SPELET
  * ========================================================================== */
+
+/* Rullande årtalssiffror (odometer) */
+function odometer(el, number) {
+  const digits = String(number).split("");
+  el.innerHTML = digits.map(() =>
+    `<span class="odo-col"><span class="odo-strip">${
+      "0123456789".split("").map((n) => `<i>${n}</i>`).join("")
+    }</span></span>`
+  ).join("");
+  el.classList.add("odo");
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    el.querySelectorAll(".odo-strip").forEach((strip, i) => {
+      strip.style.transitionDelay = `${i * 0.1}s`;
+      strip.style.transform = `translateY(-${Number(digits[i])}em)`;
+    });
+  }));
+}
 let game = null;
 
 function saveGame() {
@@ -1088,35 +1301,68 @@ function startGame(names, target, songs) {
     selectedSlot: null,
     revealed: false,
     bonusGiven: false,
+    exactGiven: false,
     useTokens: store.settings.tokens,
+    mode: store.settings.mode,           // 'classic' | 'decade'
+    exactBonus: store.settings.exactBonus,
+    solo: players.length === 1,          // soloträning: ett fel = slut
+    over: false,
+    discard: [],                         // felplacerade/bytta kort
+    sudden: false,                       // sudden death-läge
+    alive: null,                         // spelarindex kvar i sudden death
     locked: false,   // gissningen låst → utmaningsfas
     bets: [],        // [{ p: spelarindex, slot }]
     picking: null,   // spelarindex som just väljer lucka för sin utmaning
   };
+  if (game.solo) toast("🧑‍🎤 Soloträning: bygg så långt du kan – ett fel och det är över!", "warn");
   nextCard();
   showScreen("screen-game");
 }
 
 function nextCard() {
-  if (game.deck.length === 0) { endGame(null); return; }
+  if (game.deck.length === 0) {
+    // Oavgjort med kort i slaskhögen? Sudden death!
+    if (!game.solo && !game.sudden && game.discard.length > 0) {
+      const max = Math.max(...game.players.map((p) => p.timeline.length));
+      const tied = game.players
+        .map((p, i) => ({ p, i }))
+        .filter(({ p }) => p.timeline.length === max);
+      if (tied.length > 1) {
+        game.sudden = true;
+        game.alive = tied.map(({ i }) => i);
+        game.deck = shuffle(game.discard);
+        game.discard = [];
+        game.current = game.alive[0];
+        toast(`☠️ Sudden death mellan ${tied.map(({ p }) => p.name).join(" & ")} – först rätt vinner!`, "warn");
+        sfx.wrong();
+      } else { endGame(null); return; }
+    } else { endGame(null); return; }
+  }
   game.card = game.deck.pop();
   game.selectedSlot = null;
   game.revealed = false;
   game.bonusGiven = false;
+  game.exactGiven = false;
   game.locked = false;
   game.bets = [];
   game.picking = null;
-  $("flip-card").classList.remove("flipped");
+  const flip = $("flip-card");
+  flip.classList.remove("flipped", "deal");
+  void flip.offsetWidth; // starta om kortgivnings-animationen
+  flip.classList.add("deal");
+  setTimeout(() => flip.classList.remove("deal"), 700);
   loadTrack(game.card);
   saveGame();
   renderGame();
 }
 
-/* Får kortet plats i luckan `slot` på tidslinjen `tl`? */
+/* Får kortet plats i luckan `slot` på tidslinjen `tl`?
+   I decennieläget räcker rätt årtionde. */
 function slotFits(tl, slot, year) {
+  const k = game && game.mode === "decade" ? (y) => Math.floor(y / 10) : (y) => y;
   const before = slot === 0 ? null : tl[slot - 1];
   const after = slot === tl.length ? null : tl[slot];
-  return (!before || before.year <= year) && (!after || year <= after.year);
+  return (!before || k(before.year) <= k(year)) && (!after || k(year) <= k(after.year));
 }
 
 function insertByYear(tl, card) {
@@ -1126,6 +1372,7 @@ function insertByYear(tl, card) {
 }
 
 function stealPossible() {
+  if (game.solo || game.sudden) return false;
   return game.useTokens &&
     game.players.some((pl, i) => i !== game.current && (pl.tokens >= 1 || game.bets.some((b) => b.p === i)));
 }
@@ -1136,11 +1383,20 @@ function renderGame() {
   const p = currentPlayer();
   $("deck-count").textContent = `🃏 ${game.deck.length}`;
   $("timeline-heading").innerHTML =
-    `${p.avatar} <b>${escapeHtml(p.name)}</b>s tidslinje · ${p.timeline.length}/${game.target}`;
+    (game.sudden ? "☠️ " : "") +
+    `${p.avatar} <b>${escapeHtml(p.name)}</b>s tidslinje · ` +
+    (game.solo ? `${p.timeline.length} kort` : `${p.timeline.length}/${game.target}`);
+  $("timeline-hint").innerHTML =
+    game.sudden ? "☠️ <b>Sudden death:</b> första rätta placeringen vinner allt!" :
+    game.mode === "decade"
+      ? "Tryck på en lucka <b>+</b> – i decennieläget räcker rätt årtionde! 🧒"
+      : "Tryck på en lucka <b>+</b> där du tror låten hör hemma!";
   $("reveal-panel").classList.toggle("hidden", !game.revealed);
   $("timeline-hint").classList.toggle("hidden", game.revealed || game.locked);
   $("flip-card").classList.toggle("flipped", game.revealed);
-  if (game.revealed) $("flip-year").textContent = game.card.year;
+  const fy = $("flip-year");
+  if (game.revealed && !fy.classList.contains("odo")) fy.textContent = game.card.year;
+  if (!game.revealed) { fy.classList.remove("odo"); fy.textContent = ""; }
 
   // Avslöja-/Lås-knappen
   const btnReveal = $("btn-reveal");
@@ -1200,12 +1456,15 @@ function renderGame() {
   const sb = $("scoreboard");
   sb.innerHTML = "";
   game.players.forEach((pl, i) => {
+    const out = game.sudden && !game.alive.includes(i);
     const chip = document.createElement("span");
-    chip.className = "sb-chip" + (i === game.current ? " on" : "");
+    chip.className = "sb-chip" + (i === game.current ? " on" : "") + (out ? " out" : "");
     chip.innerHTML =
       `<span class="avatar" style="background:${pl.color}33">${pl.avatar}</span>` +
-      `<b>${escapeHtml(pl.name)}</b> ${pl.timeline.length}/${game.target}` +
-      (game.useTokens ? `<span class="sb-tokens">🪙${pl.tokens}</span>` : "");
+      `<b>${escapeHtml(pl.name)}</b> ` +
+      (game.solo ? `${pl.timeline.length}` : `${pl.timeline.length}/${game.target}`) +
+      (game.useTokens ? `<span class="sb-tokens">🪙${pl.tokens}</span>` : "") +
+      (out ? " 💤" : "");
     sb.appendChild(chip);
   });
 
@@ -1275,6 +1534,7 @@ $("btn-skip-song").onclick = () => {
   const p = currentPlayer();
   if (!game.useTokens || p.tokens < 1 || game.revealed) return;
   p.tokens--;
+  game.discard.push(game.card);
   stopMusic();
   sfx.token();
   toast(`${p.name} bytte låt! (−1 🪙)`, "warn");
@@ -1309,17 +1569,23 @@ function doReveal() {
 
   game.revealed = true;
   game.picking = null;
-  $("embed-wrap").classList.add("show-embed");
-  $("flip-year").textContent = card.year;
+  $(PLAYER_UIS.game.wrap).classList.add("show-embed");
   $("flip-card").classList.add("flipped");
+  odometer($("flip-year"), card.year);
 
   const res = $("reveal-result");
-  if (correct) {
+  if (correct && game.sudden) {
+    res.textContent = "🏆 Rätt – och därmed vinst!";
+    res.className = "reveal-result ok";
+  } else if (correct) {
     res.textContent = "✅ Rätt placerat!";
     res.className = "reveal-result ok";
   } else if (stealer) {
     res.textContent = `😈 ${stealer.name} snor kortet!`;
     res.className = "reveal-result ok";
+  } else if (game.solo) {
+    res.textContent = "💥 Fel – omgången är över!";
+    res.className = "reveal-result fail";
   } else {
     res.textContent = "❌ Fel plats!";
     res.className = "reveal-result fail";
@@ -1337,13 +1603,15 @@ function doReveal() {
 
   $("btn-bonus").classList.toggle("hidden", !game.useTokens);
   $("btn-bonus").disabled = false;
+  $("btn-exact").classList.toggle("hidden", !(game.useTokens && game.exactBonus));
+  $("btn-exact").disabled = false;
 
   if (correct) {
     sfx.correct();
     confetti.burst();
     p.timeline.splice(i, 0, card);
     game.justPlaced = i;
-    if (p.timeline.length >= game.target) {
+    if (game.sudden || (!game.solo && p.timeline.length >= game.target)) {
       saveGame();
       renderGame();
       setTimeout(() => endGame(p), 1500);
@@ -1362,6 +1630,11 @@ function doReveal() {
     }
   } else {
     sfx.wrong();
+    game.discard.push(card);
+    if (game.solo) {
+      game.over = true;
+      $("btn-next").textContent = "🏁 Se resultat";
+    }
     const panel = document.querySelector(".timeline-panel");
     panel.classList.add("shake");
     setTimeout(() => panel.classList.remove("shake"), 500);
@@ -1382,9 +1655,28 @@ $("btn-bonus").onclick = () => {
   renderGame();
 };
 
+$("btn-exact").onclick = () => {
+  if (game.exactGiven) return;
+  game.exactGiven = true;
+  const p = currentPlayer();
+  p.tokens++;
+  sfx.token();
+  $("btn-exact").disabled = true;
+  toast(`${p.name} prickade exakta året (${game.card.year}): +1 🪙!`, "ok");
+  saveGame();
+  renderGame();
+};
+
 $("btn-next").onclick = () => {
   stopMusic();
-  game.current = (game.current + 1) % game.players.length;
+  $("btn-next").textContent = "➡ Nästa spelare";
+  if (game.over) { endGame(null); return; }
+  if (game.sudden) {
+    const pos = game.alive.indexOf(game.current);
+    game.current = game.alive[(pos + 1) % game.alive.length];
+  } else if (!game.solo) {
+    game.current = (game.current + 1) % game.players.length;
+  }
   nextCard();
 };
 
@@ -1396,24 +1688,50 @@ function endGame(winner) {
   const sorted = [...game.players].sort((a, b) => b.timeline.length - a.timeline.length);
   const max = sorted[0].timeline.length;
   const tops = sorted.filter((p) => p.timeline.length === max);
-
-  if (winner) {
-    $("winner-text").textContent = `${winner.name} vinner! 🎉`;
-  } else if (tops.length === 1) {
-    $("winner-text").textContent = `Leken är slut – ${tops[0].name} vinner med ${max} kort!`;
-  } else {
-    $("winner-text").textContent =
-      `Leken är slut – oavgjort mellan ${tops.map((p) => p.name).join(" & ")}!`;
-  }
-
   const medals = ["🥇", "🥈", "🥉"];
-  $("standings").innerHTML = sorted.map((p, i) => `
-    <div class="standing-row">
-      <span class="medal">${medals[i] || "•"}</span>
-      <span class="avatar" style="background:${p.color}33">${p.avatar}</span>
-      <span class="name">${escapeHtml(p.name)}</span>
-      <span class="score">${p.timeline.length} kort</span>
-    </div>`).join("");
+
+  if (game.solo) {
+    // Soloträning: poäng + rekord
+    const score = game.players[0].timeline.length;
+    const prev = store.highscore?.score ?? 0;
+    const record = score > prev;
+    if (record) {
+      store.highscore = { score, name: game.players[0].name };
+      saveStore();
+    }
+    $("winner-text").textContent = record
+      ? `🏆 NYTT REKORD: ${score} kort!`
+      : `${score} kort denna gång!`;
+    $("standings").innerHTML = `
+      <div class="standing-row">
+        <span class="medal">🎯</span>
+        <span class="name">Din runda</span>
+        <span class="score">${score} kort</span>
+      </div>
+      <div class="standing-row">
+        <span class="medal">🏆</span>
+        <span class="name">Rekord${store.highscore?.name ? ` (${escapeHtml(store.highscore.name)})` : ""}</span>
+        <span class="score">${store.highscore?.score ?? score} kort</span>
+      </div>`;
+  } else {
+    if (winner) {
+      $("winner-text").textContent = game.sudden
+        ? `☠️ ${winner.name} vinner sudden death! 🎉`
+        : `${winner.name} vinner! 🎉`;
+    } else if (tops.length === 1) {
+      $("winner-text").textContent = `Leken är slut – ${tops[0].name} vinner med ${max} kort!`;
+    } else {
+      $("winner-text").textContent =
+        `Leken är slut – oavgjort mellan ${tops.map((p) => p.name).join(" & ")}!`;
+    }
+    $("standings").innerHTML = sorted.map((p, i) => `
+      <div class="standing-row">
+        <span class="medal">${medals[i] || "•"}</span>
+        <span class="avatar" style="background:${p.color}33">${p.avatar}</span>
+        <span class="name">${escapeHtml(p.name)}</span>
+        <span class="score">${p.timeline.length} kort</span>
+      </div>`).join("");
+  }
 
   showScreen("screen-winner");
   sfx.win();
