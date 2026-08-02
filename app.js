@@ -1685,9 +1685,11 @@ function renderGame() {
       : "Tryck på en lucka <b>+</b> där du tror att låten hör hemma!";
   $("reveal-panel").classList.toggle("hidden", !game.revealed);
   $("btn-continue").classList.toggle("hidden", !(game.revealed && game.canContinue));
+  const choosing = game.revealed && game.canContinue;
   $("btn-next").textContent = game.over
     ? "🏁 Se resultat"
-    : (game.revealed && game.canContinue ? "🛟 Stanna – nästa spelare" : "➡ Nästa spelare");
+    : (choosing ? "🛟 Stanna – säkra poängen" : "➡ Nästa spelare");
+  $("btn-next").classList.toggle("safe", choosing);
   $("timeline-hint").classList.toggle("hidden", game.revealed || game.locked);
   $("flip-card").classList.toggle("flipped", game.revealed);
   const fy = $("flip-year");
