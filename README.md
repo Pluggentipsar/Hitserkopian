@@ -160,7 +160,10 @@ utskrivbara spelkort i A4-format (12 kort per ark, ca 60×60 mm):
 
 - **Framsidan**: en QR-kod som öppnar låten (Spotify/YouTube). Låtar utan
   länk får en QR-kod som öppnar en YouTube-sökning.
-- **Baksidan**: artist, årtal och titel.
+- **Baksidan**: artist, årtal och titel – och har listan quizfrågor kan
+  du med ett reglage i utskriftsvyn även trycka **frågan med
+  svarsalternativ** på kortet, med rätt svar markerat ✓ (den som läser
+  upp kortet ser facit).
 
 Skriv ut **dubbelsidigt** med **”Vänd längs långsidan”** – baksidorna är
 spegelvända per rad så att rätt info hamnar bakom rätt QR-kod. Klipp längs

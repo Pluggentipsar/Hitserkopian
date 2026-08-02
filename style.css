@@ -1054,6 +1054,27 @@ a { color: var(--accent-deep); text-decoration-thickness: 2px; }
 }
 .pcard-back .pt { font-family: "Fraunces", serif; font-size: 3.9mm; font-style: italic; color: #55503f; overflow-wrap: anywhere; }
 
+/* Baksida med quizfråga: kompaktare topp + frågedel */
+.pcard-back.pq { justify-content: flex-start; padding: 3mm; }
+.pcard-back.pq .pa { font-size: 3.1mm; }
+.pcard-back.pq .py { font-size: 6.5mm; margin: 0.8mm 0; padding: 0.3mm 3.5mm; }
+.pcard-back.pq .pt { font-size: 2.9mm; }
+.pquiz {
+  width: 100%; margin-top: 1.6mm; padding-top: 1.4mm;
+  border-top: 0.4mm dashed #b3a88e;
+  text-align: left;
+}
+.pquiz-q {
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 700; font-size: 2.7mm; line-height: 1.3;
+  margin-bottom: 1mm; color: #292216;
+}
+.pquiz-opt {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 2.5mm; line-height: 1.4; color: #55503f;
+}
+.pquiz-opt.on { font-weight: 700; color: #1d5a50; }
+
 @media print {
   body { background: #fff !important; }
   .bg-blobs, #toasts, #confetti-canvas, .no-print { display: none !important; }
