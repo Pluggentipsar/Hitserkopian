@@ -184,7 +184,7 @@ function loadStore() {
 let store = loadStore();
 store.settings = {
   target: 5, tokens: true, sound: true,
-  theme: "light", mode: "classic", exactBonus: false,
+  theme: "light", mode: "classic", exactBonus: false, streak: true,
   ...store.settings,
 };
 store.players = Array.isArray(store.players) && store.players.length
@@ -459,6 +459,8 @@ function renderSettings() {
     b.classList.toggle("on", b.dataset.m === store.settings.mode);
   });
   $("toggle-tokens").setAttribute("aria-checked", String(store.settings.tokens));
+  $("toggle-streak").setAttribute("aria-checked", String(store.settings.streak));
+  $("input-target-custom").value = store.settings.target;
   $("toggle-sound").setAttribute("aria-checked", String(store.settings.sound));
   $("toggle-exact").setAttribute("aria-checked", String(store.settings.exactBonus));
   $("toggle-theme").setAttribute("aria-checked", String(store.settings.theme === "dark"));
@@ -486,7 +488,14 @@ $("mode-seg").querySelectorAll("button").forEach((b) => {
   };
 });
 
-for (const [id, key] of [["toggle-tokens", "tokens"], ["toggle-sound", "sound"], ["toggle-exact", "exactBonus"]]) {
+$("input-target-custom").onchange = (e) => {
+  const v = Math.max(2, Math.min(30, parseInt(e.target.value, 10) || store.settings.target));
+  store.settings.target = v;
+  saveStore();
+  renderSettings();
+};
+
+for (const [id, key] of [["toggle-tokens", "tokens"], ["toggle-sound", "sound"], ["toggle-exact", "exactBonus"], ["toggle-streak", "streak"]]) {
   $(id).onclick = () => {
     store.settings[key] = !store.settings[key];
     saveStore();
@@ -1436,6 +1445,8 @@ function startGame(names, target, songs) {
     useTokens: store.settings.tokens,
     mode: store.settings.mode,           // 'classic' | 'decade'
     exactBonus: store.settings.exactBonus,
+    useStreak: store.settings.streak,    // vinstsvit: våga ta upp till 3 kort/tur
+    canContinue: false,
     solo: players.length === 1,          // soloträning: ett fel = slut
     over: false,
     discard: [],                         // felplacerade/bytta kort
@@ -1491,6 +1502,7 @@ function nextCard() {
   game.locked = false;
   game.bets = [];
   game.picking = null;
+  game.canContinue = false;
   $("reveal-stamp").classList.add("hidden");
   const flip = $("flip-card");
   flip.classList.remove("flipped", "deal");
@@ -1517,6 +1529,14 @@ function insertByYear(tl, card) {
   tl.splice(idx, 0, card);
 }
 
+function streakCount(p) {
+  return p.timeline.filter((c) => c._streak).length;
+}
+
+function bankStreak(p) {
+  p.timeline.forEach((c) => { if (c._streak) delete c._streak; });
+}
+
 function stealPossible() {
   if (game.solo || game.sudden) return false;
   return game.useTokens &&
@@ -1531,13 +1551,18 @@ function renderGame() {
   $("timeline-heading").innerHTML =
     (game.sudden ? "☠️ " : "") +
     `${p.avatar} <b>${escapeHtml(p.name)}</b>s tidslinje · ` +
-    (game.solo ? `${p.timeline.length} kort` : `${p.timeline.length}/${game.target}`);
+    (game.solo ? `${p.timeline.length} kort` : `${p.timeline.length}/${game.target}`) +
+    (streakCount(p) ? ` · 🔥${streakCount(p)}/3` : "");
   $("timeline-hint").innerHTML =
     game.sudden ? "☠️ <b>Sudden death:</b> första rätta placeringen vinner allt!" :
     game.mode === "decade"
       ? "Tryck på en lucka <b>+</b> – i decennieläget räcker rätt årtionde! 🧒"
       : "Tryck på en lucka <b>+</b> där du tror att låten hör hemma!";
   $("reveal-panel").classList.toggle("hidden", !game.revealed);
+  $("btn-continue").classList.toggle("hidden", !(game.revealed && game.canContinue));
+  $("btn-next").textContent = game.over
+    ? "🏁 Se resultat"
+    : (game.revealed && game.canContinue ? "🛟 Stanna – nästa spelare" : "➡ Nästa spelare");
   $("timeline-hint").classList.toggle("hidden", game.revealed || game.locked);
   $("flip-card").classList.toggle("flipped", game.revealed);
   const fy = $("flip-year");
@@ -1646,7 +1671,7 @@ function renderGame() {
   addSlot(0);
   p.timeline.forEach((s, i) => {
     const c = document.createElement("div");
-    c.className = "card" + (game.justPlaced === i ? " new-card" : "");
+    c.className = "card" + (game.justPlaced === i ? " new-card" : "") + (s._streak ? " at-stake" : "");
     c.innerHTML = `
       ${s.art ? `<img class="card-art" src="${escapeHtml(s.art)}" alt="" loading="lazy">` : ""}
       <div class="card-year">${escapeHtml(s.year)}</div>
@@ -1767,6 +1792,7 @@ function doReveal() {
   if (correct) {
     sfx.correct();
     confetti.burst();
+    if (game.useStreak && !game.solo && !game.sudden) card._streak = true;
     p.timeline.splice(i, 0, card);
     game.justPlaced = i;
     if (game.sudden || (!game.solo && p.timeline.length >= game.target)) {
@@ -1775,10 +1801,17 @@ function doReveal() {
       setTimeout(() => endGame(p), 1500);
       return;
     }
+    const sc = streakCount(p);
+    game.canContinue = game.useStreak && !game.solo && !game.sudden &&
+      sc < 3 && game.deck.length > 0;
+    if (game.useStreak && !game.solo && !game.sudden && sc >= 3) {
+      toast("Tre kort i sviten – mer än så får man inte ta. Snyggt! 🔥", "ok");
+    }
   } else if (stealer) {
     sfx.correct();
     confetti.burst();
     insertByYear(stealer.timeline, card);
+    breakStreak(p);
     toast(`😈 ${stealer.name} satsade rätt och stjäl kortet!`, "ok");
     if (stealer.timeline.length >= game.target) {
       saveGame();
@@ -1789,16 +1822,24 @@ function doReveal() {
   } else {
     sfx.wrong();
     game.discard.push(card);
-    if (game.solo) {
-      game.over = true;
-      $("btn-next").textContent = "🏁 Se resultat";
-    }
+    breakStreak(p);
+    if (game.solo) game.over = true;
     const panel = document.querySelector(".timeline-panel");
     panel.classList.add("shake");
     setTimeout(() => panel.classList.remove("shake"), 500);
   }
   saveGame();
   renderGame();
+}
+
+/* Fel svar bryter vinstsviten: turens kort åker tillbaka i leken */
+function breakStreak(p) {
+  const lost = p.timeline.filter((c) => c._streak);
+  if (lost.length === 0) return;
+  p.timeline = p.timeline.filter((c) => !c._streak);
+  lost.forEach((c) => { delete c._streak; game.discard.push(c); });
+  $("reveal-result").textContent += ` Sviten bröts – ${lost.length} kort åkte tillbaka i leken! 💔`;
+  toast(`💔 ${p.name} förlorade ${lost.length} kort ur sviten.`, "err");
 }
 
 $("btn-bonus").onclick = () => {
@@ -1825,9 +1866,15 @@ $("btn-exact").onclick = () => {
   renderGame();
 };
 
+$("btn-continue").onclick = () => {
+  if (!game.canContinue) return;
+  stopMusic();
+  nextCard(); // samma spelare drar nästa låt – sviten står på spel
+};
+
 $("btn-next").onclick = () => {
   stopMusic();
-  $("btn-next").textContent = "➡ Nästa spelare";
+  bankStreak(currentPlayer()); // frivilligt stopp: turens kort är säkrade
   if (game.over) { endGame(null); return; }
   if (game.sudden) {
     const pos = game.alive.indexOf(game.current);
