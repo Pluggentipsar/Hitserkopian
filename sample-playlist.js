@@ -1,4 +1,4 @@
-// Exempelspellista för Hitserkopian.
+// Exempelspellista för Skivbacken.
 // Lägg gärna in egna Spotify-/YouTube-länkar i "url" – utan länk får du en
 // YouTube-sökknapp i spelet i stället.
 const SAMPLE_PLAYLIST = {
