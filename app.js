@@ -761,6 +761,77 @@ $("input-import").onchange = async (e) => {
   e.target.value = "";
 };
 
+$("btn-import-answer").onclick = () => openSheet("sheet-answer");
+
+/* Hitta JSON-objektet även om AI:n skrivit text eller kodstaket runt det */
+function extractJson(text) {
+  const a = text.indexOf("{");
+  const b = text.lastIndexOf("}");
+  if (a === -1 || b === -1 || b <= a) throw new Error("hittar ingen JSON i texten");
+  return text.slice(a, b + 1);
+}
+
+/* Uppdatera listans låtar med AI-svaret – matcha på länk eller artist+titel */
+function mergeAnswerIntoPlaylist(pl, p) {
+  if (!p || !Array.isArray(p.songs)) throw new Error("svaret saknar \"songs\"");
+  let updated = 0, added = 0;
+  for (const raw of p.songs) {
+    const inc = normalizeSong(raw);
+    if (!inc.artist && !inc.title) continue;
+    const match = pl.songs.find((s) =>
+      (inc.url && s.url && s.url === inc.url) ||
+      (inc.title && s.title.toLowerCase() === inc.title.toLowerCase() &&
+        (!inc.artist || !s.artist || s.artist.toLowerCase() === inc.artist.toLowerCase()))
+    );
+    if (match) {
+      if (inc.year > 0) match.year = inc.year;
+      if (inc.artist) match.artist = inc.artist;
+      if (inc.tidbit) match.tidbit = inc.tidbit;
+      if (inc.quiz.length) match.quiz = inc.quiz;
+      if (!match.url && inc.url) match.url = inc.url;
+      if (!match.art && inc.art) match.art = inc.art;
+      if (!match.preview && inc.preview) match.preview = inc.preview;
+      updated++;
+    } else {
+      pl.songs.push(inc);
+      added++;
+    }
+  }
+  if (updated + added === 0) throw new Error("inga låtar kändes igen i svaret");
+  return { updated, added };
+}
+
+function importAnswerText(text) {
+  try {
+    const p = JSON.parse(extractJson(text));
+    const pl = currentPlaylist();
+    const { updated, added } = mergeAnswerIntoPlaylist(pl, p);
+    saveStore();
+    closeSheets();
+    $("input-answer-json").value = "";
+    renderEditor();
+    toast(
+      `Inläst i ”${pl.name}”! ${updated} låtar uppdaterade` +
+      (added ? `, ${added} nya tillagda` : "") + `. 💡❓`, "ok"
+    );
+  } catch (err) {
+    toast(`Kunde inte läsa svaret: ${err.message}`, "err");
+  }
+}
+
+$("btn-parse-answer").onclick = () => {
+  const text = $("input-answer-json").value.trim();
+  if (!text) { toast("Klistra in svaret från Claude först.", "err"); return; }
+  importAnswerText(text);
+};
+
+$("input-answer-file").onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  importAnswerText(await file.text());
+  e.target.value = "";
+};
+
 $("btn-copy-tidbit-prompt").onclick = async () => {
   const pl = currentPlaylist();
   const prompt =
@@ -783,7 +854,7 @@ Gör så här:
 Svara med enbart den kompletta JSON-filen (samma format) så att jag kan importera den direkt i spelet.`;
   try {
     await navigator.clipboard.writeText(prompt);
-    toast("Prompt kopierad! Claude skriver tidbits + quizfrågor → spara svaret som .json → importera här.", "ok");
+    toast("Prompt kopierad! Klistra in hos Claude → kopiera hela svaret → tryck 📥 Läs in svar.", "ok");
   } catch (_) {
     window.prompt("Kopiera texten manuellt:", prompt);
   }

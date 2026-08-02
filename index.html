@@ -214,6 +214,25 @@
     </div>
   </div>
 
+  <!-- Sheet: Läs in AI-svar -->
+  <div id="sheet-answer" class="sheet">
+    <div class="sheet-backdrop" data-close></div>
+    <div class="sheet-card">
+      <div class="sheet-grab"></div>
+      <h3>📥 Läs in AI-svaret</h3>
+      <p class="small-text muted">Klistra in hela svaret från Claude – det gör inget om det är
+        text runt JSON:en, den hittas ändå. Låtarna i <b>den här listan</b> uppdateras med
+        tidbits, quizfrågor och ifyllda årtal. Inga dubbletter skapas.</p>
+      <textarea id="input-answer-json" rows="6" class="sheet-textarea"
+        placeholder='{ "name": "…", "songs": [ … ] }'></textarea>
+      <button id="btn-parse-answer" class="btn primary wide">📥 Läs in</button>
+      <div class="divider"><span>eller</span></div>
+      <label class="btn secondary wide file-btn">⬆️ Välj JSON-fil
+        <input type="file" id="input-answer-file" accept=".json,application/json,.txt" hidden>
+      </label>
+    </div>
+  </div>
+
   <!-- ============ REDIGERAREN ============ -->
   <section id="screen-editor" class="screen">
     <header class="bar">
@@ -226,11 +245,12 @@
       <button id="btn-autofill" class="btn secondary small">🍎 Komplettera</button>
       <button id="btn-share" class="btn secondary small">🔗 Dela</button>
       <button id="btn-print-cards" class="btn secondary small">🖨 Kort</button>
-      <button id="btn-copy-tidbit-prompt" class="btn secondary small">🤖 Tidbits</button>
+      <button id="btn-copy-tidbit-prompt" class="btn secondary small">🤖 Kopiera prompt</button>
+      <button id="btn-import-answer" class="btn secondary small">📥 Läs in svar</button>
       <button id="btn-export" class="btn secondary small">⬇️ JSON</button>
     </div>
     <p class="muted small-text toolbar-hint">🍎 hämtar årtal, omslag &amp; ljud från iTunes ·
-      🤖 kopierar en fråga till Claude som skriver kul fakta OCH quizfrågor om varje artist</p>
+      🤖 kopierar en fråga till Claude som skriver tidbits och quizfrågor · 📥 läser in svaret och uppdaterar låtarna i den här listan</p>
 
     <div class="panel">
       <div class="panel-head">
