@@ -102,6 +102,10 @@
         <button id="toggle-streak" class="switch" role="switch" aria-checked="true"><i></i></button>
       </div>
       <div class="setting-row">
+        <span>Quizfråga <small class="muted">(efter avslöjandet, +1 🪙 vid rätt – kräver frågor i listan)</small></span>
+        <button id="toggle-quiz" class="switch" role="switch" aria-checked="true"><i></i></button>
+      </div>
+      <div class="setting-row">
         <span>Spelläge <small class="muted">(decennium = rätt årtionde räcker)</small></span>
         <div id="mode-seg" class="seg">
           <button data-m="classic">🎯 Klassiskt</button>
@@ -218,7 +222,7 @@
       <button id="btn-export" class="btn secondary small">⬇️ JSON</button>
     </div>
     <p class="muted small-text toolbar-hint">🍎 hämtar årtal, omslag &amp; ljud från iTunes ·
-      🤖 kopierar en fråga till Claude som skriver kul fakta om varje artist</p>
+      🤖 kopierar en fråga till Claude som skriver kul fakta OCH quizfrågor om varje artist</p>
 
     <div class="panel">
       <div class="panel-head">
@@ -296,6 +300,10 @@
       <div id="reveal-result" class="reveal-result"></div>
       <div id="reveal-card" class="card revealed"></div>
       <p id="reveal-tidbit" class="tidbit"></p>
+      <div id="quiz-block" class="quiz hidden">
+        <div id="quiz-q" class="quiz-q"></div>
+        <div id="quiz-options" class="quiz-options"></div>
+      </div>
       <div class="row wrap" style="justify-content:center">
         <button id="btn-bonus" class="btn secondary hidden">🏅 Artist + titel? +1 🪙</button>
         <button id="btn-exact" class="btn secondary hidden">🎯 Exakta året? +1 🪙</button>

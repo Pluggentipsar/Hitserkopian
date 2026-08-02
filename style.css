@@ -842,6 +842,36 @@ a { color: var(--accent-deep); text-decoration-thickness: 2px; }
   transform: rotate(-1deg);
 }
 
+/* Kunskapsfrågan */
+.quiz {
+  background: var(--paper);
+  border: 1.5px dashed var(--ink);
+  border-radius: 2px;
+  padding: 16px 14px 12px;
+  text-align: left;
+  position: relative;
+  margin-top: 16px;
+}
+.quiz::before {
+  content: "KUNSKAPSFRÅGA · +1 🪙";
+  position: absolute; top: -9px; left: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em;
+  background: var(--accent); color: #fff8ec;
+  padding: 2px 7px; border-radius: 3px;
+  transform: rotate(-1deg);
+}
+.quiz-q { font-weight: 700; font-size: 1rem; margin-bottom: 10px; }
+.quiz-options { display: grid; gap: 7px; }
+.quiz-opt {
+  width: 100%; justify-content: flex-start; text-align: left;
+  font-size: 0.8rem; text-transform: none; letter-spacing: 0.02em;
+}
+.quiz-opt.right { background: var(--teal) !important; color: #fff8ec !important; border-color: var(--ink); }
+.quiz-opt.wrong { background: var(--accent) !important; color: #fff8ec !important; }
+.quiz-opt:disabled { opacity: 0.85; }
+.quiz-opt.dim:disabled { opacity: 0.45; }
+
 /* Övriga spelare */
 .other-player { margin: 10px 0; }
 .other-player .op-name {
