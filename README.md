@@ -172,12 +172,7 @@ Repot innehåller ett GitHub Actions-flöde (`.github/workflows/deploy-pages.yml
 som automatiskt publicerar spelet till GitHub Pages vid varje push. Sajten
 hamnar på:
 
-**https://pluggentipsar.github.io/Hitserkopian/**
-
-> 💡 Vill du att adressen ska matcha det nya namnet? Döp om repot till
-> `Skivbacken` under *Settings → General → Repository name* på GitHub –
-> då flyttar sajten automatiskt till `pluggentipsar.github.io/Skivbacken`
-> (den gamla adressen slutar gälla, så uppdatera ev. delade länkar).
+**https://pluggentipsar.github.io/skivbacken/**
 
 ### Cloudflare Pages (alternativ)
 
@@ -185,7 +180,7 @@ Vill du hellre ligga på Cloudflare? Inget byggsteg behövs:
 
 1. Logga in på [dash.cloudflare.com](https://dash.cloudflare.com) →
    **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
-2. Välj repot `Pluggentipsar/Hitserkopian` och branchen du vill publicera.
+2. Välj repot `Pluggentipsar/skivbacken` och branchen du vill publicera.
 3. Lämna *Build command* tomt och sätt *Build output directory* till `/`.
 4. Klart – du får en adress i stil med `skivbacken.pages.dev`, och varje
    push publiceras automatiskt.
