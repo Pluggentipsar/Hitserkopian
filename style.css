@@ -199,6 +199,11 @@ a { color: var(--accent-deep); text-decoration-thickness: 2px; }
 .btn.cta:active:not(:disabled) { transform: translate(4px, 4px); }
 .sticky-cta { position: sticky; bottom: 14px; z-index: 20; margin-top: 10px; }
 
+/* Trygga valet: stanna & säkra poängen (teal = samma färg som RÄTT!-stämpeln) */
+.btn.cta.safe { background: var(--teal); }
+.btn.cta.safe:hover:not(:disabled) { background: #255c53; }
+:root[data-theme="dark"] .btn.cta.safe:hover:not(:disabled) { background: #4d9c8f; }
+
 .play-btn {
   width: 72px; height: 72px; border-radius: 50%;
   font-size: 1.5rem; padding: 0;
