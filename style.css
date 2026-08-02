@@ -245,6 +245,23 @@ a { color: var(--accent-deep); text-decoration-thickness: 2px; }
 }
 .sheet-textarea, .sheet-input { margin: 8px 0; }
 
+.target-input {
+  width: 64px; padding: 7px 6px;
+  border: 2px solid var(--ink); border-radius: 8px;
+  background: var(--paper); color: var(--ink);
+  font-family: var(--font-mono); font-weight: 700; font-size: 0.85rem;
+  text-align: center; outline: none;
+}
+.target-input:focus { border-color: var(--accent); }
+
+/* Kort som står på spel i en pågående svit */
+.timeline .card.at-stake { border-style: dashed; border-color: var(--accent); }
+.timeline .card.at-stake::after {
+  content: "🔥";
+  position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+  font-size: 0.8rem;
+}
+
 /* Segment & switchar */
 .setting-row {
   display: flex; align-items: center; justify-content: space-between;

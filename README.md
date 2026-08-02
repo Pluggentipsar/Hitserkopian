@@ -123,6 +123,13 @@ reserv.
 
 ## 🎮 Spelvarianter
 
+- **🔥 Vinstsvit (standard, går att stänga av)** – svarar du rätt får du
+  välja: stanna och säkra kortet, eller våga dra nästa låt direkt. Max tre
+  kort per tur – men gissar du fel någon gång under turen ryker **alla**
+  kort du vunnit den turen tillbaka i leken. Kort som står på spel märks
+  med 🔥 på tidslinjen.
+- **🎯 Valfritt vinstmål** – snabbknappar för 5/7/10 kort, eller skriv in
+  vilket mål som helst mellan 2 och 30.
 - **🧒 Decennium-läge** – rätt årtionde räcker för att kortet ska sitta.
   Perfekt för barn eller som uppvärmning.
 - **🎯 Exakt år-bonus** – slå på i inställningarna: den som säger exakt
