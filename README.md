@@ -18,10 +18,13 @@ och **📷 Skanna kort**.
    luckan (`+`) i din tidslinje där du tror att låten hör hemma.
 4. Tryck **🎬 Avslöja!** – är året rätt placerat får du kortet, annars ryker
    det. Samtidigt visas årtal, artist, titel, omslag och en 💡 tidbit.
-5. Först till målet (standard 5 kort, ställbart) vinner!
+5. Först till målet (standard 5 poäng, ställbart) vinner! Rätt placering
+   ger 1 poäng och rätt quizsvar 1 poäng.
 
 I **💿 Mina spellistor** hanterar du musiken: hämta från Spotify, ta emot från
-en kompis, bygg själv – eller börja med exempellistan.
+en kompis, bygg själv – eller börja med exempellistan. Låtlistan i
+redigeraren är **dold som standard** (bakom en spoilerknapp) så att
+spelledaren kan kopiera Claude-prompten utan att se årtalen i förväg.
 
 > Tips: låtar utan länk får i stället en **🔎 YouTube-sökning**-knapp som
 > öppnar sökresultatet i en ny flik, så att spelledaren kan trycka play där.
@@ -124,9 +127,13 @@ reserv.
 ## 🎮 Spelvarianter
 
 - **❓ Kunskapsfråga (standard, går att stänga av)** – efter avslöjandet
-  får spelaren en flervalsfråga om artisten eller bandet. Rätt svar ger
-  +1 🪙. Frågorna genereras av Claude via 🤖-knappen (se nedan) och följer
-  med när listor delas eller exporteras. Exempellistan har färdiga frågor.
+  får spelaren en flervalsfråga. Välj **frågetyp** i husreglerna:
+  🎤 om artisten/bandet, 📅 om vad som hände samma år, eller 🎲 blandat.
+  Frågorna genereras av Claude via 🤖-knappen (se nedan) och följer med
+  när listor delas. Exempellistan har färdiga frågor av båda typerna.
+- **🧮 Poängräkning** – 1 poäng för rätt placerad låt + 1 poäng för rätt
+  quizsvar, och det är poängen som räknas mot vinstmålet. Bryts en
+  vinstsvit ryker kortens poäng, men quizpoäng behåller man alltid.
 - **🔥 Vinstsvit (standard, går att stänga av)** – svarar du rätt får du
   välja: stanna och säkra kortet, eller våga dra nästa låt direkt. Max tre
   kort per tur – men gissar du fel någon gång under turen ryker **alla**

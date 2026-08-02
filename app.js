@@ -164,6 +164,7 @@ function normalizeQuiz(raw) {
       q: String(q.q ?? q.question ?? "").trim(),
       options: Array.isArray(q.options) ? q.options.slice(0, 4).map((o) => String(o).trim()) : [],
       correct: Number.isInteger(q.correct) ? q.correct : 0,
+      type: q.type === "year" ? "year" : "artist",
     }))
     .filter((q) => q.q && q.options.length >= 2 && q.correct >= 0 && q.correct < q.options.length);
 }
@@ -196,7 +197,7 @@ function loadStore() {
 let store = loadStore();
 store.settings = {
   target: 5, tokens: true, sound: true,
-  theme: "light", mode: "classic", exactBonus: false, streak: true, quiz: true,
+  theme: "light", mode: "classic", exactBonus: false, streak: true, quiz: true, quizType: "mixed",
   ...store.settings,
 };
 store.players = Array.isArray(store.players) && store.players.length
@@ -268,7 +269,7 @@ function renderHome() {
   const rec = $("home-record");
   rec.classList.toggle("hidden", !store.highscore);
   if (store.highscore) {
-    rec.textContent = `🏆 Solorekord: ${store.highscore.score} kort (${store.highscore.name})`;
+    rec.textContent = `🏆 Solorekord: ${store.highscore.score} poäng (${store.highscore.name})`;
   }
   applyTheme();
 }
@@ -470,6 +471,9 @@ function renderSettings() {
   $("mode-seg").querySelectorAll("button").forEach((b) => {
     b.classList.toggle("on", b.dataset.m === store.settings.mode);
   });
+  $("quiztype-seg").querySelectorAll("button").forEach((b) => {
+    b.classList.toggle("on", b.dataset.q === store.settings.quizType);
+  });
   $("toggle-tokens").setAttribute("aria-checked", String(store.settings.tokens));
   $("toggle-streak").setAttribute("aria-checked", String(store.settings.streak));
   $("toggle-quiz").setAttribute("aria-checked", String(store.settings.quiz));
@@ -496,6 +500,14 @@ $("target-seg").querySelectorAll("button").forEach((b) => {
 $("mode-seg").querySelectorAll("button").forEach((b) => {
   b.onclick = () => {
     store.settings.mode = b.dataset.m;
+    saveStore();
+    renderSettings();
+  };
+});
+
+$("quiztype-seg").querySelectorAll("button").forEach((b) => {
+  b.onclick = () => {
+    store.settings.quizType = b.dataset.q;
     saveStore();
     renderSettings();
   };
@@ -579,13 +591,20 @@ $("btn-discard-game").onclick = () => {
  * REDIGERAREN
  * ========================================================================== */
 let editIndex = null;
+let songsRevealed = false; // låtlistan är dold tills spelledaren väljer att titta
 
 function openEditor() {
   clearSongForm();
+  songsRevealed = false;
   $("input-song-search").value = "";
   renderEditor();
   showScreen("screen-editor");
 }
+
+$("btn-reveal-songs").onclick = () => {
+  songsRevealed = true;
+  renderEditor();
+};
 
 function renderEditor() {
   const pl = currentPlaylist();
@@ -593,9 +612,13 @@ function renderEditor() {
   $("editor-song-count").textContent = pl.songs.length;
   $("editor-empty").classList.toggle("hidden", pl.songs.length > 0);
 
+  $("btn-reveal-songs").classList.toggle("hidden", songsRevealed || pl.songs.length === 0);
+  $("input-song-search").classList.toggle("hidden", !songsRevealed);
+
   const q = $("input-song-search").value.trim().toLowerCase();
   const ul = $("editor-song-list");
   ul.innerHTML = "";
+  if (!songsRevealed) return; // inga spoilers – knappar och verktyg funkar ändå
   [...pl.songs]
     .map((s, i) => ({ s, i }))
     .filter(({ s }) => !q || `${s.artist} ${s.title} ${s.year}`.toLowerCase().includes(q))
@@ -747,9 +770,13 @@ ${JSON.stringify({ name: pl.name, songs: pl.songs }, null, 2)}
 
 Gör så här:
 1. Skriv en kort, rolig och gärna överraskande "tidbit" på svenska (1–2 meningar) om artisten eller låten i fältet "tidbit" för varje låt.
-2. Fyll fältet "quiz" för varje låt med 1–2 flervalsfrågor på svenska om artisten, bandet eller låten (INTE om årtalet – det avslöjas ändå i spelet). Formatet är en lista:
-   "quiz": [{ "q": "Frågan?", "options": ["A", "B", "C", "D"], "correct": 0 }]
-   där "correct" är index (0–3) för rätt svar. Variera var det rätta svaret ligger, och gör de felaktiga alternativen rimliga.
+2. Fyll fältet "quiz" för varje låt med TVÅ flervalsfrågor på svenska:
+   - en med "type": "artist" – om artisten, bandet eller låten (inte om årtalet)
+   - en med "type": "year" – om något känt som hände samma år som låten släpptes (nyheter, sport, film, teknik – t.ex. "Vad hände också 1976?")
+   Formatet är en lista:
+   "quiz": [{ "type": "artist", "q": "Frågan?", "options": ["A", "B", "C", "D"], "correct": 0 },
+            { "type": "year", "q": "Vad hände också ÅÅÅÅ?", "options": ["A", "B", "C", "D"], "correct": 2 }]
+   där "correct" är index (0–3) för rätt svar. Variera var det rätta svaret ligger, gör felalternativen rimliga (gärna händelser från andra år), och var noga med att fakta stämmer.
 3. Där "artist" är tom eller "year" är 0: fyll i artist och originalåret då låten först släpptes, om du känner igen låten (titeln och Spotify-länken i "url" är ledtrådar). Är du osäker på året, lämna 0.
 4. Ändra inget annat – behåll "title", "url", "art" och "preview" exakt som de är.
 
@@ -1434,7 +1461,10 @@ function saveGame() {
 function loadSavedGame() {
   try {
     const g = JSON.parse(localStorage.getItem(GAME_KEY) || "null");
-    if (g && Array.isArray(g.players) && g.card) return g;
+    if (g && Array.isArray(g.players) && g.card) {
+      g.players.forEach((p) => { if (typeof p.score !== "number") p.score = p.timeline.length; });
+      return g;
+    }
   } catch (_) { /* trasigt sparfil */ }
   return null;
 }
@@ -1446,6 +1476,7 @@ function startGame(names, target, songs) {
     avatar: AVATARS[i % AVATARS.length],
     color: COLORS[i % COLORS.length],
     timeline: [deck.pop()],
+    score: 1, // startkortet räknas
     tokens: store.settings.tokens ? 2 : 0,
   }));
 
@@ -1465,6 +1496,7 @@ function startGame(names, target, songs) {
     useStreak: store.settings.streak,    // vinstsvit: våga ta upp till 3 kort/tur
     canContinue: false,
     useQuiz: store.settings.quiz,        // kunskapsfråga efter avslöjandet
+    quizType: store.settings.quizType,   // 'artist' | 'year' | 'mixed' 
     quizPick: null,                      // { qi, order } för aktuell fråga
     quizDone: false,                     // false = obesvarad, annars valt index
     solo: players.length === 1,          // soloträning: ett fel = slut
@@ -1499,10 +1531,10 @@ function nextCard() {
   if (game.deck.length === 0) {
     // Oavgjort med kort i slaskhögen? Sudden death!
     if (!game.solo && !game.sudden && game.discard.length > 0) {
-      const max = Math.max(...game.players.map((p) => p.timeline.length));
+      const max = Math.max(...game.players.map((p) => p.score));
       const tied = game.players
         .map((p, i) => ({ p, i }))
-        .filter(({ p }) => p.timeline.length === max);
+        .filter(({ p }) => p.score === max);
       if (tied.length > 1) {
         game.sudden = true;
         game.alive = tied.map(({ i }) => i);
@@ -1573,7 +1605,7 @@ function renderGame() {
   $("timeline-heading").innerHTML =
     (game.sudden ? "☠️ " : "") +
     `${p.avatar} <b>${escapeHtml(p.name)}</b>s tidslinje · ` +
-    (game.solo ? `${p.timeline.length} kort` : `${p.timeline.length}/${game.target}`) +
+    (game.solo ? `${p.score} poäng` : `${p.score}/${game.target} poäng`) +
     (streakCount(p) ? ` · 🔥${streakCount(p)}/3` : "");
   $("timeline-hint").innerHTML =
     game.sudden ? "☠️ <b>Sudden death:</b> första rätta placeringen vinner allt!" :
@@ -1681,7 +1713,7 @@ function renderGame() {
     chip.innerHTML =
       `<span class="avatar" style="background:${pl.color}33">${pl.avatar}</span>` +
       `<b>${escapeHtml(pl.name)}</b> ` +
-      (game.solo ? `${pl.timeline.length}` : `${pl.timeline.length}/${game.target}`) +
+      (game.solo ? `${pl.score}p` : `${pl.score}/${game.target}p`) +
       (game.useTokens ? `<span class="sb-tokens">🪙${pl.tokens}</span>` : "") +
       (out ? " 💤" : "");
     sb.appendChild(chip);
@@ -1741,7 +1773,7 @@ function renderGame() {
     div.className = "other-player";
     div.innerHTML =
       `<div class="op-name"><span class="avatar" style="background:${pl.color}33">${pl.avatar}</span>` +
-      `${escapeHtml(pl.name)} <span class="muted">(${pl.timeline.length}/${game.target})</span></div>` +
+      `${escapeHtml(pl.name)} <span class="muted">(${pl.score}/${game.target}p)</span></div>` +
       `<div class="op-cards">` +
       pl.timeline.map((s) => `<span class="op-chip"><b>${escapeHtml(s.year)}</b> ${escapeHtml(s.title)}</span>`).join("") +
       `</div>`;
@@ -1836,8 +1868,13 @@ function doReveal() {
   game.quizPick = null;
   game.quizDone = false;
   if (game.useQuiz && Array.isArray(card.quiz) && card.quiz.length > 0) {
-    const qi = Math.floor(Math.random() * card.quiz.length);
-    game.quizPick = { qi, order: shuffle(card.quiz[qi].options.map((_, idx) => idx)) };
+    let pool = card.quiz.map((q, idx) => ({ q, idx }));
+    if (game.quizType !== "mixed") {
+      const typed = pool.filter(({ q }) => (q.type === "year" ? "year" : "artist") === game.quizType);
+      if (typed.length) pool = typed;
+    }
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    game.quizPick = { qi: pick.idx, order: shuffle(pick.q.options.map((_, idx) => idx)) };
   }
 
   $("btn-bonus").classList.toggle("hidden", !game.useTokens);
@@ -1850,8 +1887,9 @@ function doReveal() {
     confetti.burst();
     if (game.useStreak && !game.solo && !game.sudden) card._streak = true;
     p.timeline.splice(i, 0, card);
+    p.score++;
     game.justPlaced = i;
-    if (game.sudden || (!game.solo && p.timeline.length >= game.target)) {
+    if (game.sudden || (!game.solo && p.score >= game.target)) {
       saveGame();
       renderGame();
       setTimeout(() => endGame(p), 1500);
@@ -1867,9 +1905,10 @@ function doReveal() {
     sfx.correct();
     confetti.burst();
     insertByYear(stealer.timeline, card);
+    stealer.score++;
     breakStreak(p);
     toast(`😈 ${stealer.name} satsade rätt och stjäl kortet!`, "ok");
-    if (stealer.timeline.length >= game.target) {
+    if (stealer.score >= game.target) {
       saveGame();
       renderGame();
       setTimeout(() => endGame(stealer), 1500);
@@ -1896,11 +1935,13 @@ function answerQuiz(optIdx) {
   if (optIdx === q.correct) {
     sfx.correct();
     confetti.burst();
-    if (game.useTokens) {
-      p.tokens++;
-      toast(`🎓 Rätt svar – +1 🪙 till ${p.name}!`, "ok");
-    } else {
-      toast("🎓 Rätt svar!", "ok");
+    p.score++;
+    toast(`🎓 Rätt svar – +1 poäng till ${p.name}!`, "ok");
+    if (!game.solo && p.score >= game.target) {
+      saveGame();
+      renderGame();
+      setTimeout(() => endGame(p), 1200);
+      return;
     }
   } else {
     sfx.wrong();
@@ -1915,6 +1956,7 @@ function breakStreak(p) {
   const lost = p.timeline.filter((c) => c._streak);
   if (lost.length === 0) return;
   p.timeline = p.timeline.filter((c) => !c._streak);
+  p.score = Math.max(0, p.score - lost.length);
   lost.forEach((c) => { delete c._streak; game.discard.push(c); });
   $("reveal-result").textContent += ` Sviten bröts – ${lost.length} kort åkte tillbaka i leken! 💔`;
   toast(`💔 ${p.name} förlorade ${lost.length} kort ur sviten.`, "err");
@@ -1969,14 +2011,14 @@ function endGame(winner) {
   destroyPlayers();
   localStorage.removeItem(GAME_KEY);
 
-  const sorted = [...game.players].sort((a, b) => b.timeline.length - a.timeline.length);
-  const max = sorted[0].timeline.length;
-  const tops = sorted.filter((p) => p.timeline.length === max);
+  const sorted = [...game.players].sort((a, b) => b.score - a.score);
+  const max = sorted[0].score;
+  const tops = sorted.filter((p) => p.score === max);
   const medals = ["🥇", "🥈", "🥉"];
 
   if (game.solo) {
     // Soloträning: poäng + rekord
-    const score = game.players[0].timeline.length;
+    const score = game.players[0].score;
     const prev = store.highscore?.score ?? 0;
     const record = score > prev;
     if (record) {
@@ -1984,18 +2026,18 @@ function endGame(winner) {
       saveStore();
     }
     $("winner-text").textContent = record
-      ? `NYTT REKORD: ${score} kort!`
-      : `${score} kort denna runda!`;
+      ? `NYTT REKORD: ${score} poäng!`
+      : `${score} poäng denna runda!`;
     $("standings").innerHTML = `
       <div class="standing-row">
         <span class="medal">🎯</span>
         <span class="name">Din runda</span>
-        <span class="score">${score} kort</span>
+        <span class="score">${score} poäng</span>
       </div>
       <div class="standing-row">
         <span class="medal">🏆</span>
         <span class="name">Rekord${store.highscore?.name ? ` (${escapeHtml(store.highscore.name)})` : ""}</span>
-        <span class="score">${store.highscore?.score ?? score} kort</span>
+        <span class="score">${store.highscore?.score ?? score} poäng</span>
       </div>`;
   } else {
     if (winner) {
@@ -2003,7 +2045,7 @@ function endGame(winner) {
         ? `☠️ ${winner.name} vinner sudden death! 🎉`
         : `${winner.name} vinner! 🎉`;
     } else if (tops.length === 1) {
-      $("winner-text").textContent = `Korten är slut – ${tops[0].name} vinner med ${max} kort!`;
+      $("winner-text").textContent = `Korten är slut – ${tops[0].name} vinner med ${max} poäng!`;
     } else {
       $("winner-text").textContent =
         `Korten är slut – oavgjort mellan ${tops.map((p) => p.name).join(" & ")}!`;
@@ -2013,7 +2055,7 @@ function endGame(winner) {
         <span class="medal">${medals[i] || "•"}</span>
         <span class="avatar" style="background:${p.color}33">${p.avatar}</span>
         <span class="name">${escapeHtml(p.name)}</span>
-        <span class="score">${p.timeline.length} kort</span>
+        <span class="score">${p.score} poäng</span>
       </div>`).join("");
   }
 

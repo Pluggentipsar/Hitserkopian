@@ -102,8 +102,16 @@
         <button id="toggle-streak" class="switch" role="switch" aria-checked="true"><i></i></button>
       </div>
       <div class="setting-row">
-        <span>Quizfråga <small class="muted">(efter avslöjandet, +1 🪙 vid rätt – kräver frågor i listan)</small></span>
+        <span>Quizfråga <small class="muted">(efter avslöjandet, +1 poäng vid rätt)</small></span>
         <button id="toggle-quiz" class="switch" role="switch" aria-checked="true"><i></i></button>
+      </div>
+      <div class="setting-row">
+        <span>Frågetyp</span>
+        <div id="quiztype-seg" class="seg">
+          <button data-q="artist">🎤 Artist</button>
+          <button data-q="year">📅 Året</button>
+          <button data-q="mixed">🎲 Blandat</button>
+        </div>
       </div>
       <div class="setting-row">
         <span>Spelläge <small class="muted">(decennium = rätt årtionde räcker)</small></span>
@@ -229,6 +237,7 @@
         <h3>🎼 Låtar <span id="editor-song-count" class="pill"></span></h3>
         <input type="search" id="input-song-search" class="search" placeholder="🔍 Sök…">
       </div>
+      <button id="btn-reveal-songs" class="btn secondary wide">🙈 Låtarna är dolda – visa (spoiler för den som ska spela!)</button>
       <ul id="editor-song-list" class="song-list"></ul>
       <p id="editor-empty" class="muted small-text center-text hidden">
         Här var det tomt 🦗 – lägg till en låt nedan, eller gå tillbaka och hämta musik från Spotify.</p>
