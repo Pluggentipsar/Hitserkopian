@@ -163,7 +163,8 @@ utskrivbara spelkort i A4-format (12 kort per ark, ca 60×60 mm):
 - **Baksidan**: artist, årtal och titel – och har listan quizfrågor kan
   du med ett reglage i utskriftsvyn även trycka **frågan med
   svarsalternativ** på kortet, med rätt svar markerat ✓ (den som läser
-  upp kortet ser facit).
+  upp kortet ser facit). Välj frågetyp: 🎤 artist, 📅 året eller
+  🎲 blandat (varvar typerna jämnt över korten).
 
 Skriv ut **dubbelsidigt** med **”Vänd längs långsidan”** – baksidorna är
 spegelvända per rad så att rätt info hamnar bakom rätt QR-kod. Klipp längs

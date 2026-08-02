@@ -1001,6 +1001,7 @@ function qrSvg(text) {
 }
 
 let printWithQuiz = true;
+let printQuizType = "mixed";
 
 $("toggle-print-quiz").onclick = () => {
   printWithQuiz = !printWithQuiz;
@@ -1008,12 +1009,33 @@ $("toggle-print-quiz").onclick = () => {
   renderPrint();
 };
 
+$("print-quiztype-seg").querySelectorAll("button").forEach((b) => {
+  b.onclick = () => {
+    printQuizType = b.dataset.q;
+    renderPrint();
+  };
+});
+
+/* Välj fråga till tryckt kort utifrån vald typ; blandat varvar jämnt */
+function pickPrintQuestion(s, idx) {
+  if (!printWithQuiz || !s.quiz || s.quiz.length === 0) return null;
+  const typed = (t) => s.quiz.find((q) => (q.type === "year" ? "year" : "artist") === t);
+  if (printQuizType === "artist") return typed("artist") || s.quiz[0];
+  if (printQuizType === "year") return typed("year") || s.quiz[0];
+  const want = idx % 2 === 0 ? "artist" : "year";
+  return typed(want) || typed(want === "artist" ? "year" : "artist") || s.quiz[0];
+}
+
 function renderPrint() {
   const pl = currentPlaylist();
   const songs = pl.songs.filter((s) => s.year > 0);
   $("print-title").textContent = `${pl.name} · ${songs.length} kort`;
   const hasQuiz = songs.some((s) => s.quiz && s.quiz.length > 0);
   $("print-quiz-row").classList.toggle("hidden", !hasQuiz);
+  $("print-quiztype-row").classList.toggle("hidden", !hasQuiz || !printWithQuiz);
+  $("print-quiztype-seg").querySelectorAll("button").forEach((b) => {
+    b.classList.toggle("on", b.dataset.q === printQuizType);
+  });
 
   const wrap = $("print-pages");
   wrap.innerHTML = "";
@@ -1030,7 +1052,7 @@ function renderPrint() {
   };
   const backCard = (s) => {
     const d = document.createElement("div");
-    const q = printWithQuiz && s.quiz && s.quiz.length ? s.quiz[0] : null;
+    const q = pickPrintQuestion(s, songs.indexOf(s));
     d.className = "pcard pcard-back" + (q ? " pq" : "");
     d.innerHTML = `
       <div class="pa">${escapeHtml(s.artist)}</div>
