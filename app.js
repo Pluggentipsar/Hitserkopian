@@ -1,5 +1,5 @@
 /* ==========================================================================
- * Hitserkopian – en Hitster-klon med egen spellista
+ * Skivbacken – musikquizet där man gissar årtal och bygger tidslinjer
  * ========================================================================== */
 
 const STORE_KEY = "hitserkopian.v2";
@@ -718,7 +718,7 @@ $("input-import").onchange = async (e) => {
 $("btn-copy-tidbit-prompt").onclick = async () => {
   const pl = currentPlaylist();
   const prompt =
-`Hej Claude! Här är min Hitster-spellista som JSON:
+`Hej Claude! Här är min spellista till musikspelet Skivbacken (man gissar vilket år låtar släpptes) som JSON:
 
 ${JSON.stringify({ name: pl.name, songs: pl.songs }, null, 2)}
 
@@ -891,7 +891,7 @@ function renderPrint() {
     let svg;
     try { svg = qrSvg(songQrUrl(s)); }
     catch (_) { svg = "<span style='font-size:3mm'>QR gick inte att skapa</span>"; }
-    d.innerHTML = `<div class="pqr">${svg}</div><div class="pbrand">🎵 HITSERKOPIAN</div>`;
+    d.innerHTML = `<div class="pqr">${svg}</div><div class="pbrand">🎵 SKIVBACKEN</div>`;
     return d;
   };
   const backCard = (s) => {

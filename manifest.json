@@ -1,11 +1,11 @@
 {
-  "name": "Hitserkopian",
-  "short_name": "Hitserkopian",
-  "description": "Musikquiz: hör låten, gissa året, bygg din tidslinje!",
+  "name": "Skivbacken",
+  "short_name": "Skivbacken",
+  "description": "Hör låten, gissa året, bygg din tidslinje av skivor!",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#0d0a1a",
-  "theme_color": "#0d0a1a",
+  "background_color": "#efe6d0",
+  "theme_color": "#efe6d0",
   "icons": [
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]

@@ -1,8 +1,9 @@
-# 🎵 Hitserkopian
+# 💿 Skivbacken
 
-En egen kopia av musikspelet **Hitster** – med stöd för din egen spellista,
-inbyggd musikspelare (Spotify/YouTube) och roliga tidbits om artisterna,
-skrivna av Claude.
+Musikquizet för hela gänget: hör en låt, gissa vilket år den släpptes och
+placera den rätt i din tidslinje av skivor. Egen spellista, inbyggd
+musikspelare, utskrivbara spelkort med QR-koder – och roliga tidbits om
+artisterna, skrivna av Claude.
 
 ## Så spelar du
 
@@ -28,7 +29,7 @@ en kompis, bygg själv – eller börja med exempellistan.
 ## Kör med lokal server (rekommenderas)
 
 ```bash
-cd Hitserkopian
+cd Skivbacken   # eller vad mappen heter hos dig
 npx serve .        # eller: python3 -m http.server 8000
 ```
 
@@ -145,7 +146,7 @@ utskrivbara spelkort i A4-format (12 kort per ark, ca 60×60 mm):
 
 Skriv ut **dubbelsidigt** med **”Vänd längs långsidan”** – baksidorna är
 spegelvända per rad så att rätt info hamnar bakom rätt QR-kod. Klipp längs
-de streckade linjerna, blanda och spela precis som med riktiga Hitster-kort:
+de streckade linjerna, blanda och spela som med riktiga spelkort:
 skanna med mobilen, lyssna och gissa!
 
 ## 🤖 Låt Claude skriva tidbits
@@ -166,6 +167,11 @@ hamnar på:
 
 **https://pluggentipsar.github.io/Hitserkopian/**
 
+> 💡 Vill du att adressen ska matcha det nya namnet? Döp om repot till
+> `Skivbacken` under *Settings → General → Repository name* på GitHub –
+> då flyttar sajten automatiskt till `pluggentipsar.github.io/Skivbacken`
+> (den gamla adressen slutar gälla, så uppdatera ev. delade länkar).
+
 ### Cloudflare Pages (alternativ)
 
 Vill du hellre ligga på Cloudflare? Inget byggsteg behövs:
@@ -174,7 +180,7 @@ Vill du hellre ligga på Cloudflare? Inget byggsteg behövs:
    **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
 2. Välj repot `Pluggentipsar/Hitserkopian` och branchen du vill publicera.
 3. Lämna *Build command* tomt och sätt *Build output directory* till `/`.
-4. Klart – du får en adress i stil med `hitserkopian.pages.dev`, och varje
+4. Klart – du får en adress i stil med `skivbacken.pages.dev`, och varje
    push publiceras automatiskt.
 
 ## Bra att veta om musiken
