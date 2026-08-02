@@ -169,12 +169,17 @@ skanna med mobilen, lyssna och gissa!
 
 ## 🤖 Låt Claude skriva tidbits
 
-I redigeraren finns knappen **🤖 Kopiera Claude-prompt för tidbits**. Den lägger
-en färdig fråga i urklipp – med hela din spellista som JSON. Klistra in den i en
-chatt med Claude, spara svaret som en `.json`-fil och importera den i
-redigeraren. Claude skriver tidbits, **quizfrågor** (flervalsfrågor om
-artisten/bandet till ❓-spelläget) **och** fyller i saknade artistnamn och
-årtal (praktiskt efter länk-import). Klart!
+Så här funkar AI-flödet i redigeraren:
+
+1. **🤖 Kopiera prompt** – lägger en färdig fråga i urklipp med hela din
+   spellista som JSON.
+2. Klistra in i en chatt med Claude (eller annan AI). Claude skriver
+   tidbits, **quizfrågor** av båda typerna **och** fyller i saknade
+   artistnamn och årtal.
+3. **📥 Läs in svar** – klistra in hela svaret (det gör inget om det är
+   text runt JSON:en) eller välj en sparad fil. Låtarna i listan
+   **uppdateras på plats** – inga dubbletter, och befintliga länkar,
+   omslag och ljudsnuttar behålls.
 
 ## Publicera på webben
 
