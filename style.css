@@ -108,7 +108,6 @@ body {
       var(--vinyl) 56% 68%, #2c2317 69% 71%, var(--vinyl) 72% 100%);
   border: 2px solid var(--ink);
   box-shadow: var(--shadow);
-  animation: spin 9s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -285,7 +284,6 @@ a { color: var(--accent-deep); text-decoration-thickness: 2px; }
   background: var(--sticker);
   border-color: var(--ink);
   color: #292216;
-  transform: rotate(-0.6deg);
 }
 .resume .muted { color: rgba(41, 34, 22, 0.65); }
 .resume-text { display: flex; flex-direction: column; gap: 2px; }
@@ -303,10 +301,7 @@ a { color: var(--accent-deep); text-decoration-thickness: 2px; }
   box-shadow: var(--shadow);
   transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
-.home-item:nth-child(1) { transform: rotate(-0.5deg); }
-.home-item:nth-child(2) { transform: rotate(0.4deg); }
-.home-item:nth-child(3) { transform: rotate(-0.3deg); }
-.home-item:hover { transform: translate(-1px, -2px) rotate(0deg); box-shadow: 6px 6px 0 var(--ink-soft); }
+.home-item:hover { transform: translate(-1px, -2px); box-shadow: 6px 6px 0 var(--ink-soft); }
 .home-item:active { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink-soft); }
 .hi-primary { background: var(--accent); color: #fff8ec; }
 .hi-primary .hi-text small, .hi-primary .hi-arrow { color: rgba(255, 248, 236, 0.75); }
@@ -332,9 +327,7 @@ a { color: var(--accent-deep); text-decoration-thickness: 2px; }
   border-radius: 6px;
   padding: 5px 6px 5px 8px;
   box-shadow: 2px 2px 0 var(--ink-soft);
-  transform: rotate(-0.6deg);
 }
-.p-chip:nth-child(even) { transform: rotate(0.7deg); }
 .p-chip .avatar { font-size: 1.05rem; }
 .p-chip input {
   border: none; background: transparent; color: var(--ink);
@@ -370,13 +363,11 @@ a { color: var(--accent-deep); text-decoration-thickness: 2px; }
   font-family: inherit; color: var(--ink); text-align: left;
   position: relative;
 }
-.pl-card:nth-child(odd) { transform: rotate(-1deg); }
-.pl-card:nth-child(even) { transform: rotate(0.8deg); }
-.pl-card:hover { transform: translateY(-4px) rotate(0deg); }
+.pl-card:hover { transform: translateY(-4px); }
 .pl-card.on {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent), 5px 5px 0 var(--ink-soft);
-  transform: translateY(-4px) rotate(0deg);
+  transform: translateY(-4px);
 }
 .pl-card.on::after {
   content: "VALD";
@@ -574,11 +565,20 @@ a { color: var(--accent-deep); text-decoration-thickness: 2px; }
   border: 2px solid var(--ink);
   box-shadow: var(--shadow);
   display: grid; place-items: center;
-  animation: spin 3.2s linear infinite;
+  position: relative;
+  overflow: hidden;
+}
+.vinyl::before {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    rgba(255, 248, 236, 0.14) 0 24deg, transparent 24deg 180deg,
+    rgba(255, 248, 236, 0.07) 180deg 200deg, transparent 200deg 360deg);
+  animation: spin 1.6s linear infinite;
   animation-play-state: paused;
 }
-.vinyl.spinning { animation-play-state: running; }
+.vinyl.spinning::before { animation-play-state: running; }
 .vinyl-label {
+  position: relative; z-index: 1;
   color: #fff8ec; font-family: var(--font-display);
   font-weight: 900; font-size: 1.3rem;
   text-shadow: 0 1px 3px rgba(0,0,0,0.5);
@@ -686,8 +686,6 @@ a { color: var(--accent-deep); text-decoration-thickness: 2px; }
   position: relative;
 }
 .timeline .card { min-width: 108px; flex-shrink: 0; padding-top: 12px; }
-.timeline .card:nth-child(4n+2) { transform: rotate(-0.8deg); }
-.timeline .card:nth-child(4n) { transform: rotate(0.8deg); }
 .timeline .card .card-year {
   position: absolute; top: -9px; right: -7px;
   font-family: var(--font-mono); font-weight: 700; font-size: 0.82rem;
@@ -742,7 +740,6 @@ a { color: var(--accent-deep); text-decoration-thickness: 2px; }
   border: 2px solid var(--ink);
   background: var(--sticker);
   color: #292216;
-  transform: rotate(-0.5deg);
   box-shadow: var(--shadow);
   display: flex; flex-direction: column; gap: 10px;
   border-radius: 4px;
@@ -846,10 +843,10 @@ a { color: var(--accent-deep); text-decoration-thickness: 2px; }
 
 /* ============ Vinnare: kvittot ============ */
 .winner-panel { padding: 30px 18px; }
-.trophy { font-size: 4rem; animation: bounce 1.2s ease infinite; }
+.trophy { font-size: 4rem; animation: bounce 3s ease-in-out infinite; }
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-14px); }
+  50% { transform: translateY(-5px); }
 }
 .winner-panel h2 { font-family: var(--font-display); font-weight: 900; font-style: italic; font-size: 1.5rem; }
 .standings {
@@ -910,7 +907,7 @@ a { color: var(--accent-deep); text-decoration-thickness: 2px; }
   display: grid; place-items: center;
   font-size: 3rem; margin: 0 auto 16px;
   background: var(--paper);
-  animation: bounce 1.4s ease infinite;
+  animation: bounce 3s ease-in-out infinite;
 }
 .handoff-card h2 {
   font-family: var(--font-display); font-weight: 900; font-style: italic;
