@@ -853,7 +853,7 @@ a { color: var(--accent-deep); text-decoration-thickness: 2px; }
   margin-top: 16px;
 }
 .quiz::before {
-  content: "KUNSKAPSFRÅGA · +1 🪙";
+  content: "KUNSKAPSFRÅGA · +1 POÄNG";
   position: absolute; top: -9px; left: 12px;
   font-family: var(--font-mono);
   font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em;
