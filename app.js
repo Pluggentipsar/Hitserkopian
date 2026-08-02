@@ -153,7 +153,19 @@ function normalizeSong(s) {
     tidbit: String(s.tidbit ?? "").trim(),
     art: String(s.art ?? "").trim(),         // skivomslag (bild-URL)
     preview: String(s.preview ?? "").trim(), // 30 s ljudsnutt (URL)
+    quiz: normalizeQuiz(s.quiz),             // flervalsfrågor om artisten/låten
   };
+}
+
+function normalizeQuiz(raw) {
+  const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  return list
+    .map((q) => ({
+      q: String(q.q ?? q.question ?? "").trim(),
+      options: Array.isArray(q.options) ? q.options.slice(0, 4).map((o) => String(o).trim()) : [],
+      correct: Number.isInteger(q.correct) ? q.correct : 0,
+    }))
+    .filter((q) => q.q && q.options.length >= 2 && q.correct >= 0 && q.correct < q.options.length);
 }
 
 function loadStore() {
@@ -184,7 +196,7 @@ function loadStore() {
 let store = loadStore();
 store.settings = {
   target: 5, tokens: true, sound: true,
-  theme: "light", mode: "classic", exactBonus: false, streak: true,
+  theme: "light", mode: "classic", exactBonus: false, streak: true, quiz: true,
   ...store.settings,
 };
 store.players = Array.isArray(store.players) && store.players.length
@@ -460,6 +472,7 @@ function renderSettings() {
   });
   $("toggle-tokens").setAttribute("aria-checked", String(store.settings.tokens));
   $("toggle-streak").setAttribute("aria-checked", String(store.settings.streak));
+  $("toggle-quiz").setAttribute("aria-checked", String(store.settings.quiz));
   $("input-target-custom").value = store.settings.target;
   $("toggle-sound").setAttribute("aria-checked", String(store.settings.sound));
   $("toggle-exact").setAttribute("aria-checked", String(store.settings.exactBonus));
@@ -495,7 +508,7 @@ $("input-target-custom").onchange = (e) => {
   renderSettings();
 };
 
-for (const [id, key] of [["toggle-tokens", "tokens"], ["toggle-sound", "sound"], ["toggle-exact", "exactBonus"], ["toggle-streak", "streak"]]) {
+for (const [id, key] of [["toggle-tokens", "tokens"], ["toggle-sound", "sound"], ["toggle-exact", "exactBonus"], ["toggle-streak", "streak"], ["toggle-quiz", "quiz"]]) {
   $(id).onclick = () => {
     store.settings[key] = !store.settings[key];
     saveStore();
@@ -592,6 +605,7 @@ function renderEditor() {
       const flags =
         (parseMusicUrl(s.url).type !== "none" ? "🎧" : "🔎") +
         (s.tidbit ? " 💡" : "") +
+        (s.quiz && s.quiz.length ? " ❓" : "") +
         (s.year > 0 ? "" : " ⚠️");
       li.innerHTML = `
         <span class="song-year">${s.year > 0 ? escapeHtml(s.year) : "–"}</span>
@@ -600,7 +614,7 @@ function renderEditor() {
           <div class="t">${escapeHtml(s.title)}</div>
           <div class="a">${escapeHtml(s.artist)}</div>
         </span>
-        <span class="song-flags" title="🎧 = har länk, 🔎 = YouTube-sökning, 💡 = har tidbit, ⚠️ = årtal saknas">${flags}</span>
+        <span class="song-flags" title="🎧 = har länk, 🔎 = YouTube-sökning, 💡 = har tidbit, ❓ = har quiz, ⚠️ = årtal saknas">${flags}</span>
         <button class="btn ghost small" data-act="edit">✏️</button>
         <button class="btn ghost small danger" data-act="del">🗑</button>`;
       li.querySelector('[data-act="edit"]').onclick = () => beginEditSong(i);
@@ -733,13 +747,16 @@ ${JSON.stringify({ name: pl.name, songs: pl.songs }, null, 2)}
 
 Gör så här:
 1. Skriv en kort, rolig och gärna överraskande "tidbit" på svenska (1–2 meningar) om artisten eller låten i fältet "tidbit" för varje låt.
-2. Där "artist" är tom eller "year" är 0: fyll i artist och originalåret då låten först släpptes, om du känner igen låten (titeln och Spotify-länken i "url" är ledtrådar). Är du osäker på året, lämna 0.
-3. Ändra inget annat – behåll "title", "url", "art" och "preview" exakt som de är.
+2. Fyll fältet "quiz" för varje låt med 1–2 flervalsfrågor på svenska om artisten, bandet eller låten (INTE om årtalet – det avslöjas ändå i spelet). Formatet är en lista:
+   "quiz": [{ "q": "Frågan?", "options": ["A", "B", "C", "D"], "correct": 0 }]
+   där "correct" är index (0–3) för rätt svar. Variera var det rätta svaret ligger, och gör de felaktiga alternativen rimliga.
+3. Där "artist" är tom eller "year" är 0: fyll i artist och originalåret då låten först släpptes, om du känner igen låten (titeln och Spotify-länken i "url" är ledtrådar). Är du osäker på året, lämna 0.
+4. Ändra inget annat – behåll "title", "url", "art" och "preview" exakt som de är.
 
 Svara med enbart den kompletta JSON-filen (samma format) så att jag kan importera den direkt i spelet.`;
   try {
     await navigator.clipboard.writeText(prompt);
-    toast("Prompt kopierad! Klistra in hos Claude → spara svaret som .json → importera här.", "ok");
+    toast("Prompt kopierad! Claude skriver tidbits + quizfrågor → spara svaret som .json → importera här.", "ok");
   } catch (_) {
     window.prompt("Kopiera texten manuellt:", prompt);
   }
@@ -1447,6 +1464,9 @@ function startGame(names, target, songs) {
     exactBonus: store.settings.exactBonus,
     useStreak: store.settings.streak,    // vinstsvit: våga ta upp till 3 kort/tur
     canContinue: false,
+    useQuiz: store.settings.quiz,        // kunskapsfråga efter avslöjandet
+    quizPick: null,                      // { qi, order } för aktuell fråga
+    quizDone: false,                     // false = obesvarad, annars valt index
     solo: players.length === 1,          // soloträning: ett fel = slut
     over: false,
     discard: [],                         // felplacerade/bytta kort
@@ -1503,6 +1523,8 @@ function nextCard() {
   game.bets = [];
   game.picking = null;
   game.canContinue = false;
+  game.quizPick = null;
+  game.quizDone = false;
   $("reveal-stamp").classList.add("hidden");
   const flip = $("flip-card");
   flip.classList.remove("flipped", "deal");
@@ -1621,6 +1643,32 @@ function renderGame() {
         act.appendChild(b2);
       });
     }
+  }
+
+  // Kunskapsfrågan
+  const qb = $("quiz-block");
+  if (game.revealed && game.quizPick && game.card.quiz && game.card.quiz[game.quizPick.qi]) {
+    qb.classList.remove("hidden");
+    const q = game.card.quiz[game.quizPick.qi];
+    $("quiz-q").textContent = q.q;
+    const opts = $("quiz-options");
+    opts.innerHTML = "";
+    game.quizPick.order.forEach((optIdx) => {
+      const b = document.createElement("button");
+      b.className = "btn secondary quiz-opt";
+      b.textContent = q.options[optIdx];
+      if (game.quizDone === false) {
+        b.onclick = () => answerQuiz(optIdx);
+      } else {
+        b.disabled = true;
+        if (optIdx === q.correct) b.classList.add("right");
+        else if (optIdx === game.quizDone) b.classList.add("wrong");
+        else b.classList.add("dim");
+      }
+      opts.appendChild(b);
+    });
+  } else {
+    qb.classList.add("hidden");
   }
 
   // Poängtavla
@@ -1784,6 +1832,14 @@ function doReveal() {
   tb.classList.toggle("hidden", !card.tidbit);
   tb.textContent = card.tidbit || "";
 
+  // Kunskapsfrågan: slumpa fråga + svarsordning
+  game.quizPick = null;
+  game.quizDone = false;
+  if (game.useQuiz && Array.isArray(card.quiz) && card.quiz.length > 0) {
+    const qi = Math.floor(Math.random() * card.quiz.length);
+    game.quizPick = { qi, order: shuffle(card.quiz[qi].options.map((_, idx) => idx)) };
+  }
+
   $("btn-bonus").classList.toggle("hidden", !game.useTokens);
   $("btn-bonus").disabled = false;
   $("btn-exact").classList.toggle("hidden", !(game.useTokens && game.exactBonus));
@@ -1827,6 +1883,28 @@ function doReveal() {
     const panel = document.querySelector(".timeline-panel");
     panel.classList.add("shake");
     setTimeout(() => panel.classList.remove("shake"), 500);
+  }
+  saveGame();
+  renderGame();
+}
+
+function answerQuiz(optIdx) {
+  if (!game || game.quizDone !== false || !game.quizPick) return;
+  const q = game.card.quiz[game.quizPick.qi];
+  game.quizDone = optIdx;
+  const p = currentPlayer();
+  if (optIdx === q.correct) {
+    sfx.correct();
+    confetti.burst();
+    if (game.useTokens) {
+      p.tokens++;
+      toast(`🎓 Rätt svar – +1 🪙 till ${p.name}!`, "ok");
+    } else {
+      toast("🎓 Rätt svar!", "ok");
+    }
+  } else {
+    sfx.wrong();
+    toast(`Fel – rätt svar: ${q.options[q.correct]}`, "warn");
   }
   saveGame();
   renderGame();

@@ -123,6 +123,10 @@ reserv.
 
 ## 🎮 Spelvarianter
 
+- **❓ Kunskapsfråga (standard, går att stänga av)** – efter avslöjandet
+  får spelaren en flervalsfråga om artisten eller bandet. Rätt svar ger
+  +1 🪙. Frågorna genereras av Claude via 🤖-knappen (se nedan) och följer
+  med när listor delas eller exporteras. Exempellistan har färdiga frågor.
 - **🔥 Vinstsvit (standard, går att stänga av)** – svarar du rätt får du
   välja: stanna och säkra kortet, eller våga dra nästa låt direkt. Max tre
   kort per tur – men gissar du fel någon gång under turen ryker **alla**
@@ -161,7 +165,8 @@ skanna med mobilen, lyssna och gissa!
 I redigeraren finns knappen **🤖 Kopiera Claude-prompt för tidbits**. Den lägger
 en färdig fråga i urklipp – med hela din spellista som JSON. Klistra in den i en
 chatt med Claude, spara svaret som en `.json`-fil och importera den i
-redigeraren. Claude skriver tidbits **och** fyller i saknade artistnamn och
+redigeraren. Claude skriver tidbits, **quizfrågor** (flervalsfrågor om
+artisten/bandet till ❓-spelläget) **och** fyller i saknade artistnamn och
 årtal (praktiskt efter länk-import). Klart!
 
 ## Publicera på webben
