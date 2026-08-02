@@ -1000,10 +1000,20 @@ function qrSvg(text) {
   return qr.createSvgTag({ cellSize: 2, margin: 0, scalable: true });
 }
 
+let printWithQuiz = true;
+
+$("toggle-print-quiz").onclick = () => {
+  printWithQuiz = !printWithQuiz;
+  $("toggle-print-quiz").setAttribute("aria-checked", String(printWithQuiz));
+  renderPrint();
+};
+
 function renderPrint() {
   const pl = currentPlaylist();
   const songs = pl.songs.filter((s) => s.year > 0);
   $("print-title").textContent = `${pl.name} · ${songs.length} kort`;
+  const hasQuiz = songs.some((s) => s.quiz && s.quiz.length > 0);
+  $("print-quiz-row").classList.toggle("hidden", !hasQuiz);
 
   const wrap = $("print-pages");
   wrap.innerHTML = "";
@@ -1020,11 +1030,18 @@ function renderPrint() {
   };
   const backCard = (s) => {
     const d = document.createElement("div");
-    d.className = "pcard pcard-back";
+    const q = printWithQuiz && s.quiz && s.quiz.length ? s.quiz[0] : null;
+    d.className = "pcard pcard-back" + (q ? " pq" : "");
     d.innerHTML = `
       <div class="pa">${escapeHtml(s.artist)}</div>
       <div class="py">${escapeHtml(s.year)}</div>
-      <div class="pt">${escapeHtml(s.title)}</div>`;
+      <div class="pt">${escapeHtml(s.title)}</div>` +
+      (q ? `<div class="pquiz">
+        <div class="pquiz-q">${escapeHtml(q.q)}</div>
+        ${q.options.map((o, i) =>
+          `<div class="pquiz-opt${i === q.correct ? " on" : ""}">${i === q.correct ? "✓ " : "· "}${escapeHtml(o)}</div>`
+        ).join("")}
+      </div>` : "");
     return d;
   };
   const emptyCell = () => {
